@@ -1,10 +1,18 @@
 {% extends "base.html" %}
+{% block title %}Home: Brom el ARD{% endblock %}
 {% block content %}
-<h1>Find something</h1>
-<!-- TODO: change this to match your topic (e.g. "Search recipes", "Find a book") -->
-<form class="search" action="{{ url_for('search') }}" method="get">
-  <input type="text" name="q" placeholder="Search...">
-  <button type="submit">Search</button>
+<h1>Plan your next trip</h1>
+<p>Brom el ARD is a travel planning web application that brings destination information, maps and weather together in one place. It helps users discover places, save their choices and organize itineraries with AI assistance, making trip planning simpler and more convenient.</p>
+<form id="destination-form" class="search" method="get" action="{{ url_for('search') }}">
+  <label for="country">Country</label>
+  <input type="text" id="country" name="country">
+  <label for="city">City</label>
+  <input type="text" id="city" name="city" required>
+  <button type="submit">Explore</button>
 </form>
-<p class="hint">This starter shows sample items. Edit <code>api_client.py</code> to use your own API.</p>
+<!-- Reserved for Sprint 2 -->
+<section id="featured">  
+  <h2>Featured Destinations</h2>
+  <p class="hint">Coming soon</p>  
+</section>
 {% endblock %}
