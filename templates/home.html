@@ -1,15 +1,29 @@
 {% extends "base.html" %}
 {% block title %}Home: Brom el ARD{% endblock %}
+{% block body_class %}home{% endblock %}
+{% block hero %}
+<section class="hero">
+  <div class="hero-inner">
+    <h1>Where to next?</h1>
+    <p class="hero-lead">Pick a place. We’ll bring the weather, the map and the spots worth seeing.</p>
+    <form id="destination-form" class="ticket" method="get" action="{{ url_for('search') }}">
+      <div class="ticket-field">
+        <label for="country">Country</label>
+        <input type="text" id="country" name="country" placeholder="e.g Japan">
+      </div>
+      <div class="ticket-field">
+        <label for="city">City</label>
+        <input type="text" id="city" name="city" placeholder="e.g Kyoto" required>
+      </div>
+      <div class="ticket-stub">
+        <button type="submit">Explore</button>
+      </div>
+    </form>
+  </div>
+  <p class="photo-credit">Photo: Stefano Bazzoli on Unsplash.</p>
+</section>
+{% endblock %}
 {% block content %}
-<h1>Plan your next trip</h1>
-<p>Brom el ARD is a travel planning web application that brings destination information, maps and weather together in one place. It helps users discover places, save their choices and organize itineraries with AI assistance, making trip planning simpler and more convenient.</p>
-<form id="destination-form" class="search" method="get" action="{{ url_for('search') }}">
-  <label for="country">Country</label>
-  <input type="text" id="country" name="country">
-  <label for="city">City</label>
-  <input type="text" id="city" name="city" required>
-  <button type="submit">Explore</button>
-</form>
 <!-- Reserved for Sprint 2 -->
 <section id="featured">  
   <h2>Featured Destinations</h2>

@@ -1,6 +1,8 @@
-:root { --navy:#1f3864; --blue:#2e74b5; --bg:#f6f8fb; --line:#dbe3ee; --err:#c0392b; }
+:root { --navy:#0E3B5C; --blue:#2e74b5; --bg:#EEF3F6; --line:#dbe3ee; --err:#c0392b;
+        --ink:#22303C; --cedar:#1F5E4B; --apricot:#F2A65A; --apricot-dark:#E08A35; }
 * { box-sizing: border-box; }
-body { margin:0; font-family: system-ui, Segoe UI, Calibri, sans-serif; color:#1f2937; background:#fff; }
+body { margin:0; font-family:"Bricolage Grotesque", system-ui, "Segoe UI", sans-serif; color:var(--ink); background:#fff; }
+button, input { font-family:inherit; }
 .nav { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem;
        padding:.8rem 1.2rem; background:var(--navy); color:#fff; }
 .nav .brand { color:#fff; font-weight:700; font-size:1.2rem; text-decoration:none; }
@@ -8,6 +10,9 @@ body { margin:0; font-family: system-ui, Segoe UI, Calibri, sans-serif; color:#1
 .nav nav a:hover { color:#fff; }
 .nav .who { margin-left:1rem; color:#9db7e8; font-size:.9rem; }
 .container { max-width:980px; margin:0 auto; padding:1.5rem 1.2rem; }
+/* Footer stays at the bottom: body is a column, main grows to fill the leftover space */
+body { min-height:100vh; display:flex; flex-direction:column; }
+main.container { flex:1; width:100%; }
 h1 { color:var(--navy); }
 .hint { color:#64748b; font-size:.95rem; }
 .hint code { background:#eef2f7; padding:.1rem .35rem; border-radius:4px; }
@@ -39,6 +44,45 @@ h1 { color:var(--navy); }
 .container section h2 { color:var(--navy); margin-bottom:.6rem; }
 .map { height:320px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
 
+/* ---------- Home hero (Dolomites photo + boarding-pass form) ---------- */
+/* On the home page only, the nav floats transparently over the photo */
+.home .nav { position:absolute; top:0; left:0; right:0; z-index:10;
+             background:linear-gradient(rgba(0,0,0,.35), transparent); }
+.home .nav nav a { color:#fff; }
+
+.home .hero { position:relative; min-height:clamp(520px, 80vh, 760px); display:flex; flex-direction:column;
+        justify-content:flex-end; color:#fff;
+        background:linear-gradient(90deg, rgba(14,59,92,.55), rgba(14,59,92,0) 65%),
+                   linear-gradient(rgba(14,59,92,.55), rgba(14,59,92,.10) 45%, rgba(14,59,92,.45)),
+                   url('images/hero-dolomites.jpg') center 30% / cover no-repeat; }
+.hero-inner { width:100%; max-width:980px; margin:0 auto; padding:7rem 1.2rem 3.5rem; }
+.home .hero h1 { color:#fff; font-size:clamp(2.6rem, 7vw, 4.75rem); font-weight:800; line-height:1;
+           letter-spacing:-.02em; margin:0 0 .75rem; text-shadow:0 2px 18px rgba(0,0,0,.35); }
+.hero-lead { font-size:1.2rem; max-width:34ch; margin:0 0 2rem; text-shadow:0 1px 10px rgba(0,0,0,.45); }
+.photo-credit { position:absolute; right:1rem; bottom:.6rem; margin:0; font-size:.75rem; color:rgba(255,255,255,.8); }
+
+/* The ticket: white card, two fields, dashed tear line, stub with the button */
+.ticket { --stub:11rem; display:flex; background:#fff; color:var(--ink); border-radius:16px;
+          /* two half-circle 'punches' cut out where the tear line meets the top and bottom edge */
+          -webkit-mask:radial-gradient(circle 12px at calc(100% - var(--stub)) 0, transparent 97%, #000 100%),
+                       radial-gradient(circle 12px at calc(100% - var(--stub)) 100%, transparent 97%, #000 100%);
+          -webkit-mask-composite:source-in;
+          mask:radial-gradient(circle 12px at calc(100% - var(--stub)) 0, transparent 97%, #000 100%),
+               radial-gradient(circle 12px at calc(100% - var(--stub)) 100%, transparent 97%, #000 100%);
+          mask-composite:intersect; }
+.ticket-field { flex:1; display:flex; flex-direction:column; padding:1.1rem 1.4rem; min-width:0; }
+.ticket-field + .ticket-field { border-left:1px solid var(--line); }
+.ticket-field label { font-size:.8rem; font-weight:700; color:var(--navy); margin-bottom:.35rem; }
+.ticket-field input { border:0; border-bottom:2px solid var(--line); padding:.35rem 0; font-size:1.2rem;
+                      color:var(--ink); background:transparent; }
+.ticket-field input:focus { outline:none; border-bottom-color:var(--navy); }
+.ticket-stub { width:var(--stub); display:flex; align-items:center; justify-content:center;
+               border-left:2px dashed var(--line); padding:0 1rem; }
+.ticket button { background:var(--apricot); color:var(--navy); font-weight:700; font-size:1.05rem;
+                 padding:.85rem 1.6rem; border-radius:10px; }
+.ticket button:hover { background:var(--apricot-dark); }
+.ticket button:focus-visible { outline:3px solid var(--navy); outline-offset:2px; }
+
 /* ---------- Footer ---------- */
 .site-footer { text-align:center; padding:1rem 1.2rem; border-top:1px solid var(--line);
                color:#64748b; font-size:.85rem; margin-top:2rem; }
@@ -52,4 +96,9 @@ h1 { color:var(--navy); }
   .container { padding:1rem .9rem; }
   .search { flex-direction:column; align-items:stretch; }
   .map { height:240px; }
+  .hero-inner { padding-top:6.5rem; }
+  .ticket { flex-direction:column; -webkit-mask:none; mask:none; }
+  .ticket-field + .ticket-field { border-left:0; border-top:1px solid var(--line); }
+  .ticket-stub { width:auto; border-left:0; border-top:2px dashed var(--line); padding:1rem 1.4rem; }
+  .ticket button { width:100%; }
 }
