@@ -59,7 +59,6 @@ h1 { color:var(--navy); }
 .home .hero h1 { color:#fff; font-size:clamp(2.6rem, 7vw, 4.75rem); font-weight:800; line-height:1;
            letter-spacing:-.02em; margin:0 0 .75rem; text-shadow:0 2px 18px rgba(0,0,0,.35); }
 .hero-lead { font-size:1.2rem; max-width:34ch; margin:0 0 2rem; text-shadow:0 1px 10px rgba(0,0,0,.45); }
-.photo-credit { position:absolute; right:1rem; bottom:.6rem; margin:0; font-size:.75rem; color:rgba(255,255,255,.8); }
 
 /* The ticket: white card, two fields, dashed tear line, stub with the button */
 .ticket { --stub:11rem; display:flex; background:#fff; color:var(--ink); border-radius:16px;
