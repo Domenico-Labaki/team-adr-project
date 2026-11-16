@@ -1,19 +1,14 @@
-"""
-reset_db.py  --  (re)create the database tables for LOCAL development.
+"""Reset the disposable local proposal database."""
+from app import DEFAULT_DATABASE_URI, app
+from database import initialize_database
 
-Run it whenever you change your models in models.py:
-    python reset_db.py
 
-WARNING: it drops all tables first, so you lose any local data. That's fine
-during development. On Render, the app creates the tables automatically when
-it starts (db.create_all() in app.py) - you do NOT run this script there.
-To change the schema on Render after it exists, drop the table in the
-database's PSQL console, then restart the service.
-"""
-from app import app
-from models import db
-
-with app.app_context():
-    db.drop_all()
-    db.create_all()
-    print("Database reset: all tables created from models.py.")
+if __name__ == "__main__":
+    if app.config["ON_RENDER"] or app.config["SQLALCHEMY_DATABASE_URI"] != DEFAULT_DATABASE_URI:
+        raise SystemExit("Reset is available only for the default local SQLite database.")
+    with app.app_context():
+        try:
+            initialize_database(reset=True)
+        except ValueError as error:
+            raise SystemExit(str(error)) from None
+    print("Local proposal database reset.")

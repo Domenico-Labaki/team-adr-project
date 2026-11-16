@@ -1,66 +1,134 @@
 """
-<YOUR PROJECT NAME> -- a Flask web app (team project starter).
+Brom el ARD -- a Flask web app built from the team project starter.
 
-Content comes from an external API (see api_client.py). The only data stored
-is user accounts and their favorites (see models.py). Authentication is
-email + password with Flask sessions.
+Content comes from the API client (see api_client.py). The proposal's stored
+data is defined in models.py. Authentication uses Flask sessions.
 
 Run locally:   flask run --debug    ->   http://127.0.0.1:5000
 """
 import os
 from functools import wraps
 
+import click
+
 from flask import (Flask, render_template, request, redirect, url_for,
-                   session, flash, abort)
+                   session, flash, abort, g)
+from sqlalchemy import event
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from models import db, User, Favorite
 import api_client
+from database import enable_sqlite_foreign_keys, initialize_database
+from request_security import check_login_limit, configure_request_security, log_event
 from validators import validate_signup, validate_login
 
+LOCAL_SECRET = "dev-only-change-me"
+DEFAULT_DATABASE_URI = "sqlite:///brom-el-ard.sqlite3"
+MAX_DATABASE_ID = 2**31 - 1
+
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
+app.secret_key = os.environ.get("SECRET_KEY", LOCAL_SECRET)
+app.config["ON_RENDER"] = os.environ.get("RENDER") == "true"
 
 
 def database_uri():
-    """PostgreSQL on Render (DATABASE_URL), else a local SQLite file."""
-    url = os.environ.get("DATABASE_URL")
+    """PostgreSQL on Render (DATABASE_URL), else a separate local SQLite file."""
+    url = os.environ.get("DATABASE_URL", "").strip()
     if url:
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
         if url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
         return url
-    return "sqlite:///" + os.path.abspath("app.db")
+    return DEFAULT_DATABASE_URI
+
+
+def check_render_config():
+    if app.secret_key.strip() in {"", LOCAL_SECRET}:
+        raise RuntimeError("Set a private SECRET_KEY in Render's environment.")
+    invalid_url = "Set a valid PostgreSQL DATABASE_URL in Render's environment."
+    try:
+        parsed = make_url(app.config["SQLALCHEMY_DATABASE_URI"])
+    except (ArgumentError, ValueError):
+        raise RuntimeError(invalid_url) from None
+    if parsed.drivername != "postgresql+psycopg2" or not parsed.host or not parsed.database:
+        raise RuntimeError(invalid_url)
 
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_uri()
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+if app.config["ON_RENDER"]:
+    check_render_config()
+    app.config["DEBUG"] = False
 db.init_app(app)
 with app.app_context():
-    db.create_all()
+    if db.engine.url.get_backend_name() == "sqlite":
+        event.listen(db.engine, "connect", enable_sqlite_foreign_keys)
+
+configure_request_security(app)
+
+
+@app.cli.command("init-db")
+def init_db_command():
+    """Create the proposal's tables in the configured database."""
+    try:
+        initialize_database()
+    except ValueError as error:
+        raise click.ClickException(str(error)) from None
+    click.echo("Proposal database initialized.")
+
+
+def current_user():
+    if "current_user" not in g:
+        user_id = session.get("user_id")
+        user = None
+        if type(user_id) is int and 1 <= user_id <= MAX_DATABASE_ID:
+            user = db.session.get(User, user_id)
+        g.current_user = user if user is not None and user.is_active else None
+        if "user_id" in session and g.current_user is None:
+            session.clear()
+    return g.current_user
 
 
 @app.context_processor
 def inject_globals():
-    """Make the logged-in user (and their favorite ids) available in templates."""
-    user = None
-    favorite_ids = set()
-    if "user_id" in session:
-        user = User.query.get(session["user_id"])
-        if user:
-            favorite_ids = {f.item_id for f in user.favorites}
-    return {"current_user": user, "favorite_ids": favorite_ids}
+    """Make the active account available in templates."""
+    return {"current_user": current_user()}
 
 
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if "user_id" not in session:
+        if current_user() is None:
+            log_event("access", "login_required", status=302)
             flash("Please log in first.")
             return redirect(url_for("login"))
         return view(*args, **kwargs)
     return wrapped
+
+
+def admin_required(view):
+    @login_required
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if current_user().role != "admin":
+            log_event("access", "admin_required", status=403)
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def owned_or_404(model, record_id):
+    """Find a row owned by the active user. For a stop, scope its parent itinerary first."""
+    user = current_user()
+    if user is not None and 1 <= record_id <= MAX_DATABASE_ID:
+        row = db.session.scalar(db.select(model).filter_by(id=record_id, user_id=user.id))
+        if row is not None:
+            return row
+    log_event("access", "owned_record_unavailable", status=404)
+    abort(404)
 
 
 # ---------- content (from your API) --------------------------------
@@ -72,6 +140,8 @@ def home():
 @app.route("/search")
 def search():
     query = request.args.get("q", "").strip()
+    if len(query) > 120:
+        abort(400)
     items = api_client.search(query) if query else []
     return render_template("results.html", items=items, query=query)
 
@@ -103,23 +173,32 @@ def item(item_id):
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+    errors = {}
+    data = {}
     if request.method == "POST":
-        # TODO: implement sign-up (see the Sessions & Login slides).
-        pass
-    return render_template("signup.html", errors={}, data={})
+        errors, email = validate_signup(request.form)
+        data = {"email": email} if "email" not in errors else {}
+        # TODO: create an account from valid form data (SCRUM-7).
+    return render_template("signup.html", errors=errors, data=data)
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    errors = {}
+    data = {}
     if request.method == "POST":
-        # TODO: implement log-in (see the Sessions & Login slides).
-        pass
-    return render_template("login.html", errors={}, data={})
+        check_login_limit()
+        errors, email = validate_login(request.form)
+        data = {"email": email} if "email" not in errors else {}
+        log_event("login", "invalid_form" if errors else "received")
+        # TODO: authenticate valid form data and start a fresh session (SCRUM-7).
+    return render_template("login.html", errors=errors, data=data)
 
 
-@app.route("/logout")
+@app.post("/logout")
+@login_required
 def logout():
-    # TODO: end the session (hint: session.clear()), then redirect home.
+    session.clear()
     return redirect(url_for("home"))
 
 
@@ -127,41 +206,28 @@ def logout():
 @app.route("/favorites")
 @login_required
 def favorites():
-    items = Favorite.query.filter_by(user_id=session["user_id"]).all()
+    items = current_user().favorites
     return render_template("favorites.html", favorites=items)
 
 
 @app.route("/favorites/add", methods=["POST"])
 @login_required
 def favorites_add():
-    item_id = request.form.get("item_id", "").strip()
-    if item_id:
-        exists = Favorite.query.filter_by(
-            user_id=session["user_id"], item_id=item_id).first()
-        if exists:
-            flash("Already in your favorites.")
-        else:
-            db.session.add(Favorite(
-                user_id=session["user_id"], item_id=item_id,
-                item_title=request.form.get("item_title", ""),
-                item_image=request.form.get("item_image", "")))
-            db.session.commit()
-            flash("Saved to favorites.")
-    return redirect(request.form.get("next") or url_for("favorites"))
+    flash("Saving places will be available when place providers are connected.")
+    return redirect(url_for("favorites"))
 
 
 @app.route("/favorites/remove", methods=["POST"])
 @login_required
 def favorites_remove():
-    item_id = request.form.get("item_id", "").strip()
-    fav = Favorite.query.filter_by(
-        user_id=session["user_id"], item_id=item_id).first()
-    if fav:
-        db.session.delete(fav)
-        db.session.commit()
-        flash("Removed from favorites.")
-    return redirect(request.form.get("next") or url_for("favorites"))
+    favorite_id = request.form.get("favorite_id", type=int)
+    if favorite_id is None or not 1 <= favorite_id <= MAX_DATABASE_ID:
+        abort(400)
+    db.session.delete(owned_or_404(Favorite, favorite_id))
+    db.session.commit()
+    flash("Removed from favorites.")
+    return redirect(url_for("favorites"))
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=not app.config["ON_RENDER"], load_dotenv=False)
