@@ -1,8 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Results{% endblock %}
+{% block title %}Explore: Brom el ARD{% endblock %}
 {% block content %}
-<h1>Results{% if query %} for "{{ query }}"{% endif %}</h1>
-{% if items %}
+{% set city = request.args.get('city', '') %}
+{% if error %}
+<p class="error" role="alert">{{ error }}</p>
+{% endif %}
+{% if not city %}
+<h1>Choose a destination</h1>
+<p class="hint">Pick a city on the home page to see its weather, map and places.</p>
+<a href="{{ url_for('home') }}">Back to Home</a>
+{% else %}
+<h1>Explore {{ city }}</h1>
+<section id="forecast">
+  <h2>Weather forecast</h2>
+  <div id="forecast-data">
+    <p class="hint">Forecast not available yet.</p>
+  </div>
+</section>
+<section id="map-area">
+  <h2>Map</h2>
+  <div id="map" class="map"></div>
+  <noscript><p class="hint">The map needs JavaScript to load.</p></noscript>
+</section>
+<section id="places">
+  <h2>Places to visit</h2>
+  {% if items %}
   <div class="cards">
     {% for it in items %}
       <a class="card" href="{{ url_for('item', item_id=it.id) }}">
@@ -11,7 +33,9 @@
       </a>
     {% endfor %}
   </div>
-{% else %}
-  <p class="error">Nothing found. Try another search.</p>
+  {% else %}
+  <p class="hint">Nothing found. Try another search.</p>
+  {% endif %}
+</section>
 {% endif %}
 {% endblock %}
