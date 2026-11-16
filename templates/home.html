@@ -1,10 +1,31 @@
 {% extends "base.html" %}
+{% block title %}Home: Brom el ARD{% endblock %}
+{% block body_class %}home{% endblock %}
+{% block hero %}
+<section class="hero">
+  <div class="hero-inner">
+    <h1>Where to next?</h1>
+    <p class="hero-lead">Pick a place. We’ll bring the weather, the map and the spots worth seeing.</p>
+    <form id="destination-form" class="ticket" method="get" action="{{ url_for('search') }}">
+      <div class="ticket-field">
+        <label for="country">Country</label>
+        <input type="text" id="country" name="country" placeholder="e.g Japan">
+      </div>
+      <div class="ticket-field">
+        <label for="city">City</label>
+        <input type="text" id="city" name="city" placeholder="e.g Kyoto" required>
+      </div>
+      <div class="ticket-stub">
+        <button type="submit">Explore</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
 {% block content %}
-<h1>Find something</h1>
-<!-- TODO: change this to match your topic (e.g. "Search recipes", "Find a book") -->
-<form class="search" action="{{ url_for('search') }}" method="get">
-  <input type="text" name="q" placeholder="Search...">
-  <button type="submit">Search</button>
-</form>
-<p class="hint">This starter shows sample items. Edit <code>api_client.py</code> to use your own API.</p>
+<!-- Reserved for Sprint 2 -->
+<section id="featured">  
+  <h2>Featured Destinations</h2>
+  <p class="hint">Coming soon</p>  
+</section>
 {% endblock %}
