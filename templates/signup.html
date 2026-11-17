@@ -3,7 +3,6 @@
 {% block content %}
 <h1>Create an account</h1>
 <form method="post" action="{{ url_for('signup') }}" novalidate class="auth">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label>Email <input type="email" name="email" value="{{ data.get('email','') }}"></label>
   {% if errors.get('email') %}<span class="error">{{ errors['email'] }}</span>{% endif %}
   <label>Password <input type="password" name="password"></label>

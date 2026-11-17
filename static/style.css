@@ -7,7 +7,6 @@ body { margin:0; font-family: system-ui, Segoe UI, Calibri, sans-serif; color:#1
 .nav nav a { color:#dbe6ff; text-decoration:none; margin-left:1rem; }
 .nav nav a:hover { color:#fff; }
 .nav .who { margin-left:1rem; color:#9db7e8; font-size:.9rem; }
-.nav-action { display:inline; margin-left:1rem; }
 .container { max-width:980px; margin:0 auto; padding:1.5rem 1.2rem; }
 h1 { color:var(--navy); }
 .hint { color:#64748b; font-size:.95rem; }
