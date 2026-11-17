@@ -1,7 +1,6 @@
 venv/
 .venv/
 .env
-.env.*
 /app.db
 /instance/brom-el-ard.sqlite3*
 __pycache__/
