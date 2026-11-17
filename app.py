@@ -8,9 +8,13 @@ email + password with Flask sessions.
 Flask CLI commands load .env through python-dotenv. See README.md for the
 commands that select SQLite for local development.
 """
+import json
+import logging
 import os
 from datetime import timedelta
 from functools import wraps
+from ipaddress import ip_address
+from uuid import uuid4
 
 from flask import (
     Flask,
@@ -23,9 +27,12 @@ from flask import (
     session,
     url_for,
 )
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import event, make_url
 from sqlalchemy.exc import ArgumentError
+from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import api_client
@@ -44,7 +51,93 @@ app.config.update(
     SESSION_REFRESH_EACH_REQUEST=False,
 )
 
+# Reject oversized bodies when Flask reads a submitted form.
+app.config["MAX_CONTENT_LENGTH"] = 32 * 1024
+
+
+# Assign an ID before CSRF and rate-limit checks so rejected requests can be traced.
+@app.before_request
+def assign_request_id():
+    g.request_id = uuid4()
+
+
+# Reject a declared oversized body before Flask-WTF reads it.
+@app.before_request
+def check_request_size():
+    if request.content_length and request.content_length > app.config["MAX_CONTENT_LENGTH"]:
+        abort(413)
+
+
 CSRFProtect(app)
+
+
+# Use Render's Cloudflare client address on hosted requests and the socket address locally.
+def login_client_key():
+    if app.config["SESSION_COOKIE_SECURE"]:
+        client_ip = request.headers.get("CF-Connecting-IP")
+        if client_ip:
+            try:
+                return str(ip_address(client_ip))
+            except ValueError:
+                pass
+    return get_remote_address()
+
+
+# Share the login and advisor counters in the Gunicorn worker and include retry headers.
+limiter = Limiter(login_client_key, app=app, storage_uri="memory://", headers_enabled=True)
+
+
+# Give the advisor route a per-user limit to apply after authentication and before Gemini.
+def advisor_rate_limit(user_id):
+    return limiter.limit("5/minute", key_func=lambda: str(user_id), scope="advisor")
+
+
+# Write each request log as a JSON line that the hosting service can collect.
+request_logger = logging.getLogger("brom_el_ard.requests")
+request_logger.addHandler(logging.StreamHandler())
+request_logger.setLevel(logging.INFO)
+request_logger.propagate = False
+
+
+# Return the request ID to callers and log only the metadata needed to trace the response.
+@app.after_request
+def log_response(response):
+    request_id = str(g.request_id)
+    response.headers["X-Request-ID"] = request_id
+    outcome = "error" if response.status_code >= 400 else "completed"
+    request_logger.info(json.dumps({
+        "request_id": request_id,
+        "endpoint": request.endpoint,
+        "method": request.method,
+        "status": response.status_code,
+        "outcome": outcome,
+        "error_type": g.get("error_type"),
+    }))
+    return response
+
+
+# Give users a short HTTP error message while preserving the original status and headers.
+@app.errorhandler(HTTPException)
+def handle_http_error(error):
+    messages = {
+        400: "Invalid request. Reload the page and try again.",
+        403: "Access denied.",
+        404: "Page not found.",
+        405: "Method not allowed.",
+        413: "Request is too large.",
+        429: "Too many requests. Try again later.",
+    }
+    response = error.get_response()
+    response.set_data(messages.get(error.code, "The request could not be completed."))
+    response.mimetype = "text/plain"
+    return response
+
+
+# Return a generic 500 and record only the exception type for unexpected errors.
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    g.error_type = type(error).__name__
+    return "The request could not be completed.", 500
 
 
 def database_uri():
@@ -163,6 +256,9 @@ def home():
 @app.route("/search")
 def search():
     query = request.args.get("q", "").strip()
+    # Bound the search text before passing it to the provider.
+    if len(query) > 120:
+        abort(400)
     items = api_client.search(query) if query else []
     return render_template("results.html", items=items, query=query)
 
@@ -195,14 +291,24 @@ def item(item_id):
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
+        # Reject invalid signup fields before account creation.
+        errors, email = validate_signup(request.form)
+        if errors:
+            return render_template("signup.html", errors=errors, data={"email": email})
         # TODO: implement sign-up (see the Sessions & Login slides).
         pass
     return render_template("signup.html", errors={}, data={})
 
 
 @app.route("/login", methods=["GET", "POST"])
+# Limit submitted login attempts while allowing users to open the form.
+@limiter.limit("5/minute", methods=["POST"])
 def login():
     if request.method == "POST":
+        # Reject invalid login fields before credential verification.
+        errors, email = validate_login(request.form)
+        if errors:
+            return render_template("login.html", errors=errors, data={"email": email})
         # TODO: implement log-in (see the Sessions & Login slides).
         pass
     return render_template("login.html", errors={}, data={})

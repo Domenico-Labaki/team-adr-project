@@ -96,4 +96,6 @@ Set these values in the Render web service's **Environment** settings.
 - `SECRET_KEY` — a private key Flask uses to sign sessions.
 - `DATABASE_URL` — the Internal Database URL for the same Render PostgreSQL user.
 
-Use `gunicorn app:app` as the start command.
+<!-- Keep the documented start command consistent with the in-memory rate limits. -->
+Use `gunicorn --workers 1 app:app` as the start command so requests share the
+same in-memory rate-limit counters.
