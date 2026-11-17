@@ -5,7 +5,8 @@ Content comes from an external API (see api_client.py). The only data stored
 is user accounts and their favorites (see models.py). Authentication is
 email + password with Flask sessions.
 
-Run locally:   flask run --debug    ->   http://127.0.0.1:5000
+Flask CLI commands load .env through python-dotenv. See README.md for the
+commands that select SQLite for local development.
 """
 import os
 from functools import wraps
@@ -20,7 +21,7 @@ from flask import (
     session,
     url_for,
 )
-from sqlalchemy import make_url
+from sqlalchemy import event, make_url
 from sqlalchemy.exc import ArgumentError
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -34,7 +35,7 @@ app.secret_key = os.environ.get("SECRET_KEY", LOCAL_SECRET_KEY)
 
 
 def database_uri():
-    """PostgreSQL on Render (DATABASE_URL), else a local SQLite file."""
+    """Use DATABASE_URL when set, otherwise use the local SQLite file."""
     url = os.environ.get("DATABASE_URL")
     if url:
         if url.startswith("postgres://"):
@@ -42,7 +43,7 @@ def database_uri():
         if url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
         return url
-    return "sqlite:///" + os.path.abspath("app.db")
+    return "sqlite:///brom-el-ard.sqlite3"
 
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_uri()
@@ -64,7 +65,17 @@ if os.environ.get("RENDER") == "true": # automatically set by render for the dep
 
 db.init_app(app)
 with app.app_context():
+    if db.engine.dialect.name == "sqlite":
+        @event.listens_for(db.engine, "connect")
+        def enable_sqlite_foreign_keys(connection, _record):
+            connection.execute("PRAGMA foreign_keys = ON").close()
+
+
+@app.cli.command("init-db")
+def init_db():
+    """Create the proposal's database tables."""
     db.create_all()
+    print("Database initialized.")
 
 
 @app.context_processor
