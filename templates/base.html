@@ -14,7 +14,7 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
   <header class="nav">
-    <a class="brand" href="{{ url_for('home') }}">Brom el ARD</a>
+    <a class="brand" href="{{ url_for('home') }}"><img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Brom el ARD" width="150" height="40"></a>
     <nav aria-label="Main navigation">
       <a href="{{ url_for('home') }}">Home</a>
       {% if current_user %}
