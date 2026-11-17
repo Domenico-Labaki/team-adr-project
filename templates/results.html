@@ -25,26 +25,16 @@
 <section id="places">
   <h2>Places to visit</h2>
   {% if items %}
-  <ul class="place-grid">
+  <div class="cards">
     {% for it in items %}
-      <li class="place-card">
-        <a href="{{ url_for('item', item_id=it.id) }}">
-        <img src="{{ it.image }}" alt="{{ it.title }}" loading="lazy">
-        <div class="place-body">
-          <h3>{{ it.title }}</h3>
-          {% if it.category %}
-            <p class="place-meta">{{ it.category }}</p>
-          {% endif %}
-          {% if it.rating %}
-            <p class="place-meta">{{ it.rating }}</p>
-          {% endif %}
-        </div>
-        </a>
-      </li>
+      <a class="card" href="{{ url_for('item', item_id=it.id) }}">
+        <img src="{{ it.image }}" alt="{{ it.title }}">
+        <span>{{ it.title }}</span>
+      </a>
     {% endfor %}
-  </ul>
+  </div>
   {% else %}
-  <p class="hint">We couldn’t find places for {{ city }} yet. <a href="{{url_for('home')}}">Try another destination</a></p>
+  <p class="hint">Nothing found. Try another search.</p>
   {% endif %}
 </section>
 {% endif %}

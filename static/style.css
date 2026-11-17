@@ -14,8 +14,6 @@ button, input { font-family:inherit; }
 body { min-height:100vh; display:flex; flex-direction:column; }
 main.container { flex:1; width:100%; }
 h1 { color:var(--navy); }
-/* Text links: brand colour instead of the browser's blue/purple (cards and buttons keep their own colours) */
-.container p a, .container > a { color:var(--navy); font-weight:600; }
 .hint { color:#64748b; font-size:.95rem; }
 .hint code { background:#eef2f7; padding:.1rem .35rem; border-radius:4px; }
 .flash { background:#eaf1fb; border:1px solid #c9ddf5; border-radius:8px; padding:.5rem .9rem; margin-bottom:1rem; }
@@ -45,23 +43,6 @@ h1 { color:var(--navy); }
 .container section { margin-top:1.75rem; }
 .container section h2 { color:var(--navy); margin-bottom:.6rem; }
 .map { height:320px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
-
-/* ---------- Place cards (results page) ---------- */
-.place-grid { list-style:none; margin:1rem 0 0; padding:0; display:grid;
-              grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:1.25rem; }
-.place-card a { display:flex; flex-direction:column; height:100%; background:#fff; color:var(--ink);
-                border:1px solid var(--line); border-radius:14px; overflow:hidden; text-decoration:none;
-                transition:box-shadow .2s, transform .2s; }
-.place-card a:hover { box-shadow:0 10px 24px rgba(14,59,92,.15); transform:translateY(-3px); }
-.place-card a:focus-visible { outline:3px solid var(--navy); outline-offset:3px; }
-.place-card img { width:100%; aspect-ratio:4 / 3; object-fit:cover; display:block; background:var(--bg); }
-.place-body { padding:.85rem 1rem 1rem; }
-.place-body h3 { margin:0 0 .3rem; font-size:1.1rem; color:var(--navy); }
-.place-meta { margin:0; font-size:.9rem; color:#5b6b7a; }
-@media (prefers-reduced-motion: reduce) {
-  .place-card a { transition:none; }
-  .place-card a:hover { transform:none; }
-}
 
 /* ---------- Home hero (Dolomites photo + boarding-pass form) ---------- */
 /* On the home page only, the nav floats transparently over the photo */
