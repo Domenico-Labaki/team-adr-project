@@ -64,7 +64,7 @@ def assign_request_id():
 CSRFProtect(app)
 
 
-# Use Render's Cloudflare client address on hosted requests and the socket address locally.
+# Count login attempts by Cloudflare's client IP on Render, falling back to the socket IP.
 def login_client_key():
     if app.config["SESSION_COOKIE_SECURE"]:
         client_ip = request.headers.get("CF-Connecting-IP")
@@ -76,16 +76,16 @@ def login_client_key():
     return get_remote_address()
 
 
-# Share the login and advisor counters in the Gunicorn worker and include retry headers.
+# Keep rate-limit counters in one worker and tell blocked clients when to retry.
 limiter = Limiter(login_client_key, app=app, storage_uri="memory://", headers_enabled=True)
 
 
-# Give the advisor route a per-user limit to apply after authentication and before Gemini.
+# Give the advisor route a separate limit per signed-in user before it calls Gemini.
 def advisor_rate_limit(user_id):
     return limiter.limit("5/minute", key_func=lambda: str(user_id), scope="advisor")
 
 
-# Write each request log as a JSON line that the hosting service can collect.
+# Send request logs to stderr at INFO level and prevent duplicates in the parent logger.
 request_logger = logging.getLogger("brom_el_ard.requests")
 request_logger.addHandler(logging.StreamHandler())
 request_logger.setLevel(logging.INFO)
