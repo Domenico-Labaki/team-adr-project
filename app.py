@@ -11,7 +11,8 @@ import os
 from functools import wraps
 
 from flask import (Flask, render_template, request, redirect, url_for,
-                   session, flash, abort)
+                   session, flash, abort, jsonify)
+import requests
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from models import db, User, Favorite
@@ -71,9 +72,29 @@ def home():
 
 @app.route("/search")
 def search():
-    query = request.args.get("q", "").strip()
-    items = api_client.search(query) if query else []
-    return render_template("results.html", items=items, query=query)
+    city = request.args.get("city", "").strip()
+    country = request.args.get("country", "").strip()
+    return render_template("results.html", city=city, country=country)
+
+
+@app.route("/api/places")
+def places_api():
+    try:
+        latitude = float(request.args.get("lat", ""))
+        longitude = float(request.args.get("lon", ""))
+    except ValueError:
+        return jsonify({"error": "Map coordinates are missing or invalid."}), 400
+
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        return jsonify({"error": "Map coordinates are outside the valid range."}), 400
+
+    try:
+        places = api_client.search_places(latitude, longitude)
+    except requests.RequestException:
+        app.logger.warning("Nearby places request failed")
+        return jsonify({"error": "Nearby places are temporarily unavailable."}), 502
+
+    return jsonify({"places": places})
 
 
 @app.route("/item/<item_id>")

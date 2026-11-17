@@ -1,7 +1,7 @@
 {% extends "base.html" %}
+{% block body_class %}destination-page{% endblock %}
 {% block title %}Explore: Brom el ARD{% endblock %}
 {% block content %}
-{% set city = request.args.get('city', '') %}
 {% if error %}
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
@@ -13,7 +13,7 @@
 <h1>Explore {{ city }}</h1>
 <section id="forecast">
   <h2>Weather forecast</h2>
-  <div id="forecast-data">
+  <div id="forecast-data" aria-live="polite" aria-atomic="true"> // aria-live: When its text changes, screen readers will wait until the user finishes their current sentence or action before reading the new content aloud—unlike aria-live="assertive", which interrupts immediately.  aria-atomic="true" ensures that the entire content of the element is read aloud, not just the changed part.
     <p class="hint">Forecast not available yet.</p>
   </div>
 </section>
@@ -24,18 +24,17 @@
 </section>
 <section id="places">
   <h2>Places to visit</h2>
-  {% if items %}
-  <div class="cards">
-    {% for it in items %}
-      <a class="card" href="{{ url_for('item', item_id=it.id) }}">
-        <img src="{{ it.image }}" alt="{{ it.title }}">
-        <span>{{ it.title }}</span>
-      </a>
-    {% endfor %}
+  <div id="places-list" aria-live="polite">
+    <p class="hint">Nearby places will appear here after the forecast loads.</p>
   </div>
-  {% else %}
-  <p class="hint">Nothing found. Try another search.</p>
-  {% endif %}
+  <p class="places-credit">Place data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.</p>
 </section>
 {% endif %}
 {% endblock %}
+
+//loads a JavaScript module (js/destination.js) only when a city query parameter is present in the request URL.
+{% block page_scripts %}
+  {% if city %}<script type="module" src="{{ url_for('static', filename='js/destination.js') }}"></script>{% endif %}
+{% endblock %}
+
+
