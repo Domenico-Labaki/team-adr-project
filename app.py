@@ -61,13 +61,6 @@ def assign_request_id():
     g.request_id = uuid4()
 
 
-# Reject a declared oversized body before Flask-WTF reads it.
-@app.before_request
-def check_request_size():
-    if request.content_length and request.content_length > app.config["MAX_CONTENT_LENGTH"]:
-        abort(413)
-
-
 CSRFProtect(app)
 
 
@@ -104,13 +97,11 @@ request_logger.propagate = False
 def log_response(response):
     request_id = str(g.request_id)
     response.headers["X-Request-ID"] = request_id
-    outcome = "error" if response.status_code >= 400 else "completed"
     request_logger.info(json.dumps({
         "request_id": request_id,
         "endpoint": request.endpoint,
         "method": request.method,
         "status": response.status_code,
-        "outcome": outcome,
         "error_type": g.get("error_type"),
     }))
     return response
@@ -256,9 +247,6 @@ def home():
 @app.route("/search")
 def search():
     query = request.args.get("q", "").strip()
-    # Bound the search text before passing it to the provider.
-    if len(query) > 120:
-        abort(400)
     items = api_client.search(query) if query else []
     return render_template("results.html", items=items, query=query)
 
