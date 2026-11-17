@@ -9,18 +9,21 @@ Flask CLI commands load .env through python-dotenv. See README.md for the
 commands that select SQLite for local development.
 """
 import os
+from datetime import timedelta
 from functools import wraps
 
 from flask import (
     Flask,
     abort,
     flash,
+    g,
     redirect,
     render_template,
     request,
     session,
     url_for,
 )
+from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import event, make_url
 from sqlalchemy.exc import ArgumentError
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -32,6 +35,16 @@ from validators import validate_login, validate_signup
 app = Flask(__name__)
 LOCAL_SECRET_KEY = "dev-only-fallback-secret-key"
 app.secret_key = os.environ.get("SECRET_KEY", LOCAL_SECRET_KEY)
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("RENDER") == "true",
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
+    SESSION_REFRESH_EACH_REQUEST=False,
+)
+
+CSRFProtect(app)
 
 
 def database_uri():
@@ -78,26 +91,67 @@ def init_db():
     print("Database initialized.")
 
 
+"""
+Look up the signed-in user once per request.
+Clear the session if the user ID is invalid or the account is missing or inactive.
+"""
+def get_current_user():
+    if "current_user" in g:
+        return g.current_user
+
+    user_id = session.get("user_id")
+    user = None
+    if type(user_id) is int and 0 < user_id < 2**31:
+        user = db.session.get(User, user_id)
+
+    g.current_user = user if user is not None and user.is_active else None
+    if g.current_user is None and "user_id" in session:
+        session.clear()
+
+    return g.current_user
+
+
 @app.context_processor
 def inject_globals():
     """Make the logged-in user (and their favorite ids) available in templates."""
-    user = None
+    user = get_current_user()
     favorite_ids = set()
-    if "user_id" in session:
-        user = User.query.get(session["user_id"])
-        if user:
-            favorite_ids = {f.item_id for f in user.favorites}
+    if user is not None:
+        favorite_ids = {favorite.place_id for favorite in user.favorites}
     return {"current_user": user, "favorite_ids": favorite_ids}
 
 
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if "user_id" not in session:
+        if get_current_user() is None:
             flash("Please log in first.")
             return redirect(url_for("login"))
         return view(*args, **kwargs)
     return wrapped
+
+
+# Allow only active admins to access this route.
+def admin_required(view):
+    @login_required
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if get_current_user().role != "admin":
+            abort(403)
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+# Find a record owned by the signed-in user, or return 404.
+def owned_or_404(model, record_id):
+    user = get_current_user()
+    if user is None or not 0 < record_id < 2**31:
+        abort(404)
+
+    return db.first_or_404(
+        db.select(model).filter_by(id=record_id, user_id=user.id)
+    )
 
 
 # ---------- content (from your API) --------------------------------

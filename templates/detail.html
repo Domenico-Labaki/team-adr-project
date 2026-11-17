@@ -8,12 +8,14 @@
   {% if current_user %}
     {% if item.id in favorite_ids %}
       <form method="post" action="{{ url_for('favorites_remove') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="item_id" value="{{ item.id }}">
         <input type="hidden" name="next" value="{{ request.path }}">
         <button class="btn remove">Remove from favorites</button>
       </form>
     {% else %}
       <form method="post" action="{{ url_for('favorites_add') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="item_id" value="{{ item.id }}">
         <input type="hidden" name="item_title" value="{{ item.title }}">
         <input type="hidden" name="item_image" value="{{ item.image }}">
