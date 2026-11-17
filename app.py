@@ -1,5 +1,5 @@
 """
-<YOUR PROJECT NAME> -- a Flask web app (team project starter).
+Brom el ARD -- a Flask web app.
 
 Content comes from an external API (see api_client.py). The only data stored
 is user accounts and their favorites (see models.py). Authentication is
@@ -10,16 +10,27 @@ Run locally:   flask run --debug    ->   http://127.0.0.1:5000
 import os
 from functools import wraps
 
-from flask import (Flask, render_template, request, redirect, url_for,
-                   session, flash, abort)
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import (
+    Flask,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from sqlalchemy import make_url
+from sqlalchemy.exc import ArgumentError
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from models import db, User, Favorite
 import api_client
-from validators import validate_signup, validate_login
+from models import Favorite, User, db
+from validators import validate_login, validate_signup
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
+LOCAL_SECRET_KEY = "dev-only-fallback-secret-key"
+app.secret_key = os.environ.get("SECRET_KEY", LOCAL_SECRET_KEY)
 
 
 def database_uri():
@@ -36,6 +47,21 @@ def database_uri():
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_uri()
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+if os.environ.get("RENDER") == "true": # automatically set by render for the deployed service
+    if app.secret_key.strip() in ("", LOCAL_SECRET_KEY):
+        raise RuntimeError("Set a private SECRET_KEY environment variable for this Render service")
+    # Require a well-formed PostgreSQL database URL on Render
+    error = "Set a valid PostgreSQL DATABASE_URL on Render"
+    try:
+        url = make_url(app.config["SQLALCHEMY_DATABASE_URI"])
+
+        if url.drivername != "postgresql+psycopg2" or not url.host or not url.database:
+            raise RuntimeError(error)
+    except (ArgumentError, ValueError):
+        raise RuntimeError(error) from None
+
+
 db.init_app(app)
 with app.app_context():
     db.create_all()

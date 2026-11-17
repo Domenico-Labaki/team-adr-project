@@ -21,16 +21,17 @@ implement** (see the "Sessions & Login" slides).
    - Windows: `python -m venv venv` then `venv\Scripts\activate`
    - macOS/Linux: `python3 -m venv venv` then `source venv/bin/activate`
 3. `pip install -r requirements.txt`
-4. Create the database tables: `python reset_db.py`
-5. Run the app: `flask run --debug`
-6. Open `http://127.0.0.1:5000`.
+4. Start the app with a disposable SQLite database.
+   - macOS/Linux — `FLASK_SKIP_DOTENV=1 DATABASE_URL=sqlite:///:memory: flask run --debug`
+   - Windows PowerShell — set `$env:FLASK_SKIP_DOTENV = '1'` and
+     `$env:DATABASE_URL = 'sqlite:///:memory:'`, then run `flask run --debug`.
+5. Open `http://127.0.0.1:5000`.
 
 ## The database
 - `models.py` is the single source of truth for your tables (`User`, `Favorite`).
-- `python reset_db.py` drops and recreates the tables from `models.py` - run it
-  after you change a model during development.
-- The app also calls `db.create_all()` on startup, so on Render the tables are
-  created automatically on first deploy (no script to run there).
+- The app calls `db.create_all()` on startup. Restart Flask to recreate the
+  disposable local database after changing a model.
+- `FLASK_SKIP_DOTENV=1` keeps Flask from loading settings from a local `.env`.
 
 ## Your work (the TODOs)
 - **Authentication** - implement `signup`, `login`, `logout` and sessions in
@@ -39,8 +40,8 @@ implement** (see the "Sessions & Login" slides).
 - **`api_client.py`** - replace the sample data with calls to *your* chosen API.
   Keep the shapes: `search(q)` -> list of `{id, title, image}`;
   `get_item(id)` -> one `{id, title, image, description}`.
-- **`models.py`** - rename/extend `Favorite` (or add your own table) to fit your app;
-  then run `python reset_db.py`.
+- **`models.py`** - rename or extend `Favorite` (or add your own table) to fit
+  your app, then restart Flask.
 - **`templates/`** - change the wording and show the fields your API returns.
 
 ## Structure
@@ -59,3 +60,10 @@ Procfile          start command for Render (gunicorn)
 ## Deploy
 Push to your **team GitHub repo**, then follow the **"Set Up Your Team's Database
 on Render"** activity to add a PostgreSQL database and go live.
+
+Set these values in the Render web service's **Environment** settings.
+
+- `SECRET_KEY` — a private key Flask uses to sign sessions.
+- `DATABASE_URL` — the PostgreSQL connection URL for the service.
+
+Use `gunicorn app:app` as the start command.
