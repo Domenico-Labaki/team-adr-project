@@ -1,20 +1,7 @@
 {% extends "base.html" %}
-{% set city = request.args.get('city', '') %}
-{% set country = request.args.get('country', '') %}
 {% block title %}Explore: Brom el ARD{% endblock %}
-{% block hero %}
-  {% if city %}
-    <section class="dest-band">
-      <div class="dest-band-inner">
-        <h1>{{ city }}</h1>
-        {% if country %}
-        <p class="dest-country">{{ country }}</p>
-        {% endif %}
-      </div>
-    </section>
-  {% endif %}
-{% endblock %}
 {% block content %}
+{% set city = request.args.get('city', '') %}
 {% if error %}
 <p class="error" role="alert">{{ error }}</p>
 {% endif %}
@@ -23,22 +10,19 @@
 <p class="hint">Pick a city on the home page to see its weather, map and places.</p>
 <a href="{{ url_for('home') }}">Back to Home</a>
 {% else %}
+<h1>Explore {{ city }}</h1>
 <section id="forecast">
   <h2>Weather forecast</h2>
   <div id="forecast-data">
-    <ul class="forecast-strip" aria-hidden="true">
-      {% for day in range(5) %}
-        <li class="forecast-day">
-          <span class="forecast-label">Day {{ day + 1 }}</span>
-          <span class="forecast-temp">-</span>
-        </li>
-      {% endfor %}
-    </ul>
-    <p class="hint">Forecast coming soon.</p>
+    <p class="hint">Forecast not available yet.</p>
   </div>
 </section>
-<div class="explore-layout">
-  <section id="places">
+<section id="map-area">
+  <h2>Map</h2>
+  <div id="map" class="map"></div>
+  <noscript><p class="hint">The map needs JavaScript to load.</p></noscript>
+</section>
+<section id="places">
   <h2>Places to visit</h2>
   {% if items %}
   <ul class="place-grid">
@@ -63,12 +47,5 @@
   <p class="hint">We couldn’t find places for {{ city }} yet. <a href="{{url_for('home')}}">Try another destination</a></p>
   {% endif %}
 </section>
-<section id="map-area">
-  <h2>Map</h2>
-  <div id="map" class="map"></div>
-  <noscript><p class="hint">The map needs JavaScript to load.</p></noscript>
-</section>
-</div>
-
 {% endif %}
 {% endblock %}

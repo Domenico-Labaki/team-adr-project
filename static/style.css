@@ -63,30 +63,6 @@ h1 { color:var(--navy); }
   .place-card a:hover { transform:none; }
 }
 
-/* ---------- Destination page (results.html) ---------- */
-/* Full-width band with the city name, filled into the hero block */
-.dest-band { background:linear-gradient(135deg, var(--navy) 0%, #155a7d 55%, var(--cedar) 100%); color:#fff; }
-.dest-band-inner { max-width:980px; margin:0 auto; padding:2.5rem 1.2rem 2.25rem; }
-.dest-band h1 { color:#fff; font-size:clamp(2.2rem, 6vw, 3.5rem); font-weight:800; line-height:1.05;
-                letter-spacing:-.02em; margin:0; }
-.dest-country { margin:.35rem 0 0; font-size:1.1rem; color:rgba(255,255,255,.85); }
-
-/* Forecast: a row of five day tiles */
-.forecast-strip { list-style:none; margin:0 0 .5rem; padding:0; display:grid;
-                  grid-template-columns:repeat(5, 1fr); gap:.6rem; }
-.forecast-day { display:flex; flex-direction:column; align-items:center; gap:.25rem; padding:.75rem .4rem;
-                background:var(--bg); border:1px solid var(--line); border-radius:12px; }
-.forecast-label { font-size:.85rem; font-weight:600; color:var(--navy); }
-.forecast-temp { font-size:1.3rem; font-weight:700; color:#9aa7b4; }
-
-/* Places + map: stacked on small screens, side by side from 800px, map stays in view */
-.explore-layout { display:grid; grid-template-columns:1fr; gap:0 1.75rem; }
-@media (min-width: 800px) {
-  .explore-layout { grid-template-columns:3fr 2fr; align-items:start; }
-  .explore-layout #map-area { position:sticky; top:1rem; }
-  .explore-layout .map { height:440px; }
-}
-
 /* ---------- Home hero (Dolomites photo + boarding-pass form) ---------- */
 /* On the home page only, the nav floats transparently over the photo */
 .home .nav { position:absolute; top:0; left:0; right:0; z-index:10;
