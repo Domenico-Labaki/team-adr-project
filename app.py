@@ -53,6 +53,24 @@ app.config.update(
     SESSION_REFRESH_EACH_REQUEST=False,
 )
 
+# Only these public settings are passed to the destination page.
+app.config.update(
+    GEOAPIFY_API_KEY=os.environ.get("GEOAPIFY_API_KEY", ""),
+    GEOAPIFY_TILE_URL=os.environ.get(
+        "GEOAPIFY_TILE_URL", "https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}{r}.png"
+    ),
+    GEOCODING_API_URL=os.environ.get(
+        "GEOCODING_API_URL", "https://geocoding-api.open-meteo.com/v1/search"
+    ),
+    FORECAST_API_URL=os.environ.get(
+        "FORECAST_API_URL", "https://api.open-meteo.com/v1/forecast"
+    ),
+    WIKIMEDIA_API_URL=os.environ.get(
+        "WIKIMEDIA_API_URL", "https://en.wikipedia.org/w/api.php"
+    ),
+)
+
+
 # Reject oversized bodies when Flask reads a submitted form.
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024
 
@@ -250,7 +268,16 @@ def home():
 def search():
     city = request.args.get("city", "").strip()
     country = request.args.get("country", "").strip()
-    return render_template("results.html", city=city, country=country)
+    public_api_config = {
+        "geoapifyKey": app.config["GEOAPIFY_API_KEY"],
+        "geoapifyTileUrl": app.config["GEOAPIFY_TILE_URL"],
+        "geocodingUrl": app.config["GEOCODING_API_URL"],
+        "forecastUrl": app.config["FORECAST_API_URL"],
+        "wikimediaUrl": app.config["WIKIMEDIA_API_URL"],
+    }
+    return render_template(
+        "results.html", city=city, country=country, public_api_config=public_api_config
+    )
 
 
 @app.route("/api/places")

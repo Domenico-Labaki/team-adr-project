@@ -52,9 +52,25 @@ implement** (see the "Sessions & Login" slides).
 ## Environment variables
 
 Installing the project requirements includes `python-dotenv`. Flask CLI commands
-load `DATABASE_URL` and `SECRET_KEY` from `.env` when you run them from the project
+load the environment settings from `.env` when you run them from the project
 directory. Environment variables already set in your shell or on the command
 line take precedence over values in `.env`. Git ignores `.env`.
+
+Copy the API settings from `.env.example` into your ignored `.env`, and set
+`GEOAPIFY_API_KEY` to your browser map key. API URLs have the defaults shown in
+`.env.example`; the key has no default. Without a key, weather and places still
+load, and the map displays an unavailable message.
+
+Geoapify, Open-Meteo geocoding/forecast, and Wikipedia settings are serialized
+into the destination page for direct browser requests. The Geoapify key remains
+visible to visitors in the page and tile requests. `OVERPASS_API_URL` stays on
+the server. `SECRET_KEY` and `DATABASE_URL` are never included in this public
+configuration. Attribution, sample-image, and library CDN links are not API
+configuration and remain in the source.
+
+On Render, set the same variables in the service's Environment settings and
+restart the service after changing them. For local use, Flask CLI loads `.env`;
+Gunicorn reads the variables supplied by its process environment.
 
 ## Your work (the TODOs)
 - **Authentication** - implement `signup`, `login`, `logout` and sessions in

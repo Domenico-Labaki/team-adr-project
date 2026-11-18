@@ -1,7 +1,7 @@
 // Geoapify's map key is a browser key. It must be sent with tile requests.
 // Tile requests are the individual HTTP calls your browser makes to a map server to fetch small, square image or data pieces (usually 256×256 or 512×512 pixels) that stitch together to form a seamless digital map.
 
-const GEOAPIFY_TILE_URL = "https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}{r}.png?apiKey=Z2QJ4d4hAFP8XCT6cYfgUHui6qX5aniiWGSWL8EhiTXjql2fS6lFwTtlmenSFWZp"; // with api key
+import { apiConfig } from "./config.js";
 
 let map; // it starts empty
 let marker; // declares a variable for the current location marker,
@@ -20,9 +20,15 @@ export function showMap(latitude, longitude, forecast) {
         return;
     }
 
+    if (!apiConfig.geoapifyKey) {
+        container.textContent = "The map is unavailable because its API key is not configured.";
+        return;
+    }
+
     if (!map) {
         map = L.map(container, { scrollWheelZoom: false }).setView([latitude, longitude], 12); //Creates the Leaflet map in the container, disables zooming with the mouse wheel, and centers it on the destination at zoom level 12.
-        L.tileLayer(GEOAPIFY_TILE_URL, {
+        L.tileLayer(
+            `${apiConfig.geoapifyTileUrl}${apiConfig.geoapifyTileUrl.includes("?") ? "&" : "?"}apiKey=${encodeURIComponent(apiConfig.geoapifyKey)}`, {
             minZoom: 1,
             maxZoom: 20,
             attribution: 'Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> | <a href="https://openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> | <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>'

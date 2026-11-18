@@ -1,13 +1,14 @@
 // Runs on the results page. It reads city and country from the URL,
 // gets the forecast and photo, and displays them with the map.
 
+import { apiConfig } from "./modules/config.js";
 import { showMap } from "./modules/map.js";
 
 const forecastBox = document.getElementById("forecast-data");
 
-const GEOCODING_API = "https://geocoding-api.open-meteo.com/v1/search";
-const FORECAST_API = "https://api.open-meteo.com/v1/forecast";
-const WIKIMEDIA_API = "https://en.wikipedia.org/w/api.php";
+const GEOCODING_API = apiConfig.geocodingUrl;
+const FORECAST_API = apiConfig.forecastUrl;
+const WIKIMEDIA_API = apiConfig.wikimediaUrl;
 
 const countryCodes = {
     us: "US",

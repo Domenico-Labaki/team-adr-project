@@ -8,7 +8,13 @@ API, keeping the SAME return shapes so the rest of the app keeps working:
     search(query)   -> a list of dicts, each: {"id", "title", "image"}
     get_item(id)    -> one dict: {"id", "title", "image", "description"}
 """
+import os
+
 import requests  # you'll use this for the real API calls
+
+OVERPASS_API_URL = os.environ.get(
+    "OVERPASS_API_URL", "https://overpass-api.de/api/interpreter"
+)
 
 TIMEOUT = 6  # seconds; give up instead of hanging if the API is slow
 
@@ -55,7 +61,7 @@ def search_places(latitude, longitude):
     out center 12;
     """
     response = requests.post(
-        "https://overpass-api.de/api/interpreter",
+        OVERPASS_API_URL,
         data={"data": query},
         timeout=20,
     )

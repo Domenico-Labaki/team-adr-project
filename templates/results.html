@@ -35,5 +35,8 @@
 
 <!-- loads a JavaScript module (js/destination.js) only when a city query parameter is present in the request URL. -->
 {% block page_scripts %}
-  {% if city %}<script type="module" src="{{ url_for('static', filename='js/destination.js') }}"></script>{% endif %}
+  {% if city %}
+  <script id="api-config" type="application/json">{{ public_api_config | tojson }}</script>
+  <script type="module" src="{{ url_for('static', filename='js/destination.js') }}"></script>
+  {% endif %}
 {% endblock %}
