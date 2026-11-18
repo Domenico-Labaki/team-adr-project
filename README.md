@@ -21,16 +21,40 @@ implement** (see the "Sessions & Login" slides).
    - Windows: `python -m venv venv` then `venv\Scripts\activate`
    - macOS/Linux: `python3 -m venv venv` then `source venv/bin/activate`
 3. `pip install -r requirements.txt`
-4. Create the database tables: `python reset_db.py`
-5. Run the app: `flask run --debug`
-6. Open `http://127.0.0.1:5000`.
+4. Initialize the local SQLite database, then start Flask. These commands skip
+   `.env` and select SQLite explicitly so local tests use the local database
+   even if `.env` points to Render.
+   - macOS/Linux
+
+     ```bash
+     FLASK_SKIP_DOTENV=1 DATABASE_URL=sqlite:///brom-el-ard.sqlite3 python -m flask --app app init-db
+     FLASK_SKIP_DOTENV=1 DATABASE_URL=sqlite:///brom-el-ard.sqlite3 python -m flask --app app run --debug
+     ```
+
+   - Windows PowerShell
+
+     ```powershell
+     $env:FLASK_SKIP_DOTENV = '1'
+     $env:DATABASE_URL = 'sqlite:///brom-el-ard.sqlite3'
+     python -m flask --app app init-db
+     python -m flask --app app run --debug
+     ```
+
+5. Open `http://127.0.0.1:5000`.
 
 ## The database
-- `models.py` is the single source of truth for your tables (`User`, `Favorite`).
-- `python reset_db.py` drops and recreates the tables from `models.py` - run it
-  after you change a model during development.
-- The app also calls `db.create_all()` on startup, so on Render the tables are
-  created automatically on first deploy (no script to run there).
+- `models.py` defines the six database tables.
+- The local database is `instance/brom-el-ard.sqlite3`. Its data persists across
+  restarts, and it is separate from the starter `app.db`.
+- Run `flask init-db` before the first startup. It creates missing tables and
+  preserves existing data. Changes to existing tables require a migration.
+
+## Environment variables
+
+Installing the project requirements includes `python-dotenv`. Flask CLI commands
+load `DATABASE_URL` and `SECRET_KEY` from `.env` when you run them from the project
+directory. Environment variables already set in your shell or on the command
+line take precedence over values in `.env`. Git ignores `.env`.
 
 ## Your work (the TODOs)
 - **Authentication** - implement `signup`, `login`, `logout` and sessions in
@@ -39,8 +63,6 @@ implement** (see the "Sessions & Login" slides).
 - **`api_client.py`** - replace the sample data with calls to *your* chosen API.
   Keep the shapes: `search(q)` -> list of `{id, title, image}`;
   `get_item(id)` -> one `{id, title, image, description}`.
-- **`models.py`** - rename/extend `Favorite` (or add your own table) to fit your app;
-  then run `python reset_db.py`.
 - **`templates/`** - change the wording and show the fields your API returns.
 
 ## Structure
@@ -48,8 +70,8 @@ implement** (see the "Sessions & Login" slides).
 app.py            routes; auth stubs you implement (the controller)
 api_client.py     all calls to your external API (edit this)
 validators.py     server-side validation for sign-up / log-in (provided)
-models.py         database models: User, Favorite
-reset_db.py       (re)create the tables locally
+models.py         six database models
+reset_db.py       drop and recreate the tables for local development
 templates/        pages (the view)
 static/style.css
 requirements.txt  packages
@@ -59,3 +81,21 @@ Procfile          start command for Render (gunicorn)
 ## Deploy
 Push to your **team GitHub repo**, then follow the **"Set Up Your Team's Database
 on Render"** activity to add a PostgreSQL database and go live.
+
+Use the existing Render PostgreSQL user for initialization and for the web
+service. To initialize a fresh database from your laptop, set `DATABASE_URL`
+in your local `.env` to that user's External Database URL. Run this command
+from the project directory.
+
+```bash
+python -m flask --app app init-db
+```
+
+Set these values in the Render web service's **Environment** settings.
+
+- `SECRET_KEY` — a private key Flask uses to sign sessions.
+- `DATABASE_URL` — the Internal Database URL for the same Render PostgreSQL user.
+
+<!-- Keep the documented start command consistent with the in-memory rate limits. -->
+Use `gunicorn --workers 1 app:app` as the start command so requests share the
+same in-memory rate-limit counters.

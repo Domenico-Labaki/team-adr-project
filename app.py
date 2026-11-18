@@ -1,29 +1,138 @@
 """
-<YOUR PROJECT NAME> -- a Flask web app (team project starter).
+Brom el ARD -- a Flask web app.
 
 Content comes from an external API (see api_client.py). The only data stored
 is user accounts and their favorites (see models.py). Authentication is
 email + password with Flask sessions.
 
-Run locally:   flask run --debug    ->   http://127.0.0.1:5000
+Flask CLI commands load .env through python-dotenv. See README.md for the
+commands that select SQLite for local development.
 """
+import json
+import logging
 import os
+from datetime import timedelta
 from functools import wraps
+from ipaddress import ip_address
+from uuid import uuid4
 
-from flask import (Flask, render_template, request, redirect, url_for,
-                   session, flash, abort)
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import (
+    Flask,
+    abort,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_wtf.csrf import CSRFProtect
+from sqlalchemy import event, make_url
+from sqlalchemy.exc import ArgumentError
+from werkzeug.exceptions import HTTPException
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from models import db, User, Favorite
 import api_client
-from validators import validate_signup, validate_login
+from models import Favorite, User, db
+from validators import validate_login, validate_signup
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
+LOCAL_SECRET_KEY = "dev-only-fallback-secret-key"
+app.secret_key = os.environ.get("SECRET_KEY", LOCAL_SECRET_KEY)
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("RENDER") == "true",
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
+    SESSION_REFRESH_EACH_REQUEST=False,
+)
+
+# Reject oversized bodies when Flask reads a submitted form.
+app.config["MAX_CONTENT_LENGTH"] = 32 * 1024
+
+
+# Assign an ID before CSRF and rate-limit checks so rejected requests can be traced.
+@app.before_request
+def assign_request_id():
+    g.request_id = uuid4()
+
+
+CSRFProtect(app)
+
+
+# Count login attempts by Cloudflare's client IP on Render, falling back to the socket IP.
+def login_client_key():
+    if app.config["SESSION_COOKIE_SECURE"]:
+        client_ip = request.headers.get("CF-Connecting-IP")
+        if client_ip:
+            try:
+                return str(ip_address(client_ip))
+            except ValueError:
+                pass
+    return get_remote_address()
+
+
+# Keep rate-limit counters in one worker and tell blocked clients when to retry.
+limiter = Limiter(login_client_key, app=app, storage_uri="memory://", headers_enabled=True)
+
+
+# Give the advisor route a separate limit per signed-in user before it calls Gemini.
+def advisor_rate_limit(user_id):
+    return limiter.limit("5/minute", key_func=lambda: str(user_id), scope="advisor")
+
+
+# Send request logs to stderr at INFO level and prevent duplicates in the parent logger.
+request_logger = logging.getLogger("brom_el_ard.requests")
+request_logger.addHandler(logging.StreamHandler())
+request_logger.setLevel(logging.INFO)
+request_logger.propagate = False
+
+
+# Return the request ID to callers and log only the metadata needed to trace the response.
+@app.after_request
+def log_response(response):
+    request_id = str(g.request_id)
+    response.headers["X-Request-ID"] = request_id
+    request_logger.info(json.dumps({
+        "request_id": request_id,
+        "endpoint": request.endpoint,
+        "method": request.method,
+        "status": response.status_code,
+        "error_type": g.get("error_type"),
+    }))
+    return response
+
+
+# Give users a short HTTP error message while preserving the original status and headers.
+@app.errorhandler(HTTPException)
+def handle_http_error(error):
+    messages = {
+        400: "Invalid request. Reload the page and try again.",
+        403: "Access denied.",
+        404: "Page not found.",
+        405: "Method not allowed.",
+        413: "Request is too large.",
+        429: "Too many requests. Try again later.",
+    }
+    response = error.get_response()
+    response.set_data(messages.get(error.code, "The request could not be completed."))
+    response.mimetype = "text/plain"
+    return response
+
+
+# Return a generic 500 and record only the exception type for unexpected errors.
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    g.error_type = type(error).__name__
+    return "The request could not be completed.", 500
 
 
 def database_uri():
-    """PostgreSQL on Render (DATABASE_URL), else a local SQLite file."""
+    """Use DATABASE_URL when set, otherwise use the local SQLite file."""
     url = os.environ.get("DATABASE_URL")
     if url:
         if url.startswith("postgres://"):
@@ -31,36 +140,102 @@ def database_uri():
         if url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
         return url
-    return "sqlite:///" + os.path.abspath("app.db")
+    return "sqlite:///brom-el-ard.sqlite3"
 
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_uri()
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+if os.environ.get("RENDER") == "true": # automatically set by render for the deployed service
+    if app.secret_key.strip() in ("", LOCAL_SECRET_KEY):
+        raise RuntimeError("Set a private SECRET_KEY environment variable for this Render service")
+    # Require a well-formed PostgreSQL database URL on Render
+    error = "Set a valid PostgreSQL DATABASE_URL on Render"
+    try:
+        url = make_url(app.config["SQLALCHEMY_DATABASE_URI"])
+
+        if url.drivername != "postgresql+psycopg2" or not url.host or not url.database:
+            raise RuntimeError(error)
+    except (ArgumentError, ValueError):
+        raise RuntimeError(error) from None
+
+
 db.init_app(app)
 with app.app_context():
+    if db.engine.dialect.name == "sqlite":
+        @event.listens_for(db.engine, "connect")
+        def enable_sqlite_foreign_keys(connection, _record):
+            connection.execute("PRAGMA foreign_keys = ON").close()
+
+
+@app.cli.command("init-db")
+def init_db():
+    """Create the proposal's database tables."""
     db.create_all()
+    print("Database initialized.")
+
+
+"""
+Look up the signed-in user once per request.
+Clear the session if the user ID is invalid or the account is missing or inactive.
+"""
+def get_current_user():
+    if "current_user" in g:
+        return g.current_user
+
+    user_id = session.get("user_id")
+    user = None
+    if type(user_id) is int and 0 < user_id < 2**31:
+        user = db.session.get(User, user_id)
+
+    g.current_user = user if user is not None and user.is_active else None
+    if g.current_user is None and "user_id" in session:
+        session.clear()
+
+    return g.current_user
 
 
 @app.context_processor
 def inject_globals():
     """Make the logged-in user (and their favorite ids) available in templates."""
-    user = None
+    user = get_current_user()
     favorite_ids = set()
-    if "user_id" in session:
-        user = User.query.get(session["user_id"])
-        if user:
-            favorite_ids = {f.item_id for f in user.favorites}
+    if user is not None:
+        favorite_ids = {favorite.place_id for favorite in user.favorites}
     return {"current_user": user, "favorite_ids": favorite_ids}
 
 
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if "user_id" not in session:
+        if get_current_user() is None:
             flash("Please log in first.")
             return redirect(url_for("login"))
         return view(*args, **kwargs)
     return wrapped
+
+
+# Allow only active admins to access this route.
+def admin_required(view):
+    @login_required
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if get_current_user().role != "admin":
+            abort(403)
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+# Find a record owned by the signed-in user, or return 404.
+def owned_or_404(model, record_id):
+    user = get_current_user()
+    if user is None or not 0 < record_id < 2**31:
+        abort(404)
+
+    return db.first_or_404(
+        db.select(model).filter_by(id=record_id, user_id=user.id)
+    )
 
 
 # ---------- content (from your API) --------------------------------
@@ -104,14 +279,24 @@ def item(item_id):
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
+        # Reject invalid signup fields before account creation.
+        errors, email = validate_signup(request.form)
+        if errors:
+            return render_template("signup.html", errors=errors, data={"email": email})
         # TODO: implement sign-up (see the Sessions & Login slides).
         pass
     return render_template("signup.html", errors={}, data={})
 
 
 @app.route("/login", methods=["GET", "POST"])
+# Limit submitted login attempts while allowing users to open the form.
+@limiter.limit("5/minute", methods=["POST"])
 def login():
     if request.method == "POST":
+        # Reject invalid login fields before credential verification.
+        errors, email = validate_login(request.form)
+        if errors:
+            return render_template("login.html", errors=errors, data={"email": email})
         # TODO: implement log-in (see the Sessions & Login slides).
         pass
     return render_template("login.html", errors={}, data={})
