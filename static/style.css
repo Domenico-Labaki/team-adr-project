@@ -40,9 +40,44 @@ h1 { color:var(--navy); }
 .auth button { margin-top:1rem; }
 
 /* ---------- Destination screen ---------- */
+body.destination-page { background:#f7f9fb; }
+body.destination-page .container { max-width:1020px; }
 .container section { margin-top:1.75rem; }
 .container section h2 { color:var(--navy); margin-bottom:.6rem; }
-.map { height:320px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
+.destination-page section { margin-top:2.25rem; }
+.destination-page section h2 { display:flex; align-items:center; gap:.65rem; color:var(--navy); margin-bottom:.9rem; }
+.destination-page section h2::before { content:""; width:5px; height:1.2rem; border-radius:8px; background:#6e9bb8; }
+.map { height:320px; border:1px solid #d6e0e8; border-radius:12px; background:var(--bg); box-shadow:0 4px 14px rgba(14,59,92,.05); }
+#forecast-data { display:block; }
+.weather-summary { display:grid; grid-template-columns:minmax(0, 1.15fr) minmax(260px, .85fr); gap:1.5rem;
+                   padding:1.25rem; border:1px solid #d8e2e9; border-radius:16px;
+                   background:#f0f5f8; box-shadow:0 5px 16px rgba(14,59,92,.05); }
+.weather-summary .cityCardImage { width:100%; min-height:280px; height:100%; object-fit:cover; border-radius:11px; }
+.current-weather-info { display:flex; flex-direction:column; justify-content:center; gap:.75rem; padding:.4rem; }
+.current-weather-info h3 { color:var(--navy); font-size:1.5rem; margin:0; }
+.current-weather-info .tempDisplay { font-size:3.4rem; font-weight:800; line-height:1; color:var(--navy); margin:.4rem 0; }
+.weather-condition { display:flex; align-items:center; gap:.5rem; font-size:1.1rem; font-weight:600; color:#405563; margin:0; }
+.weather-details { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.75rem; margin-top:.4rem; }
+.weather-details p { display:flex; flex-direction:column; gap:.3rem; margin:0; padding:.85rem; border-radius:10px; background:#fff; border:1px solid #dce5ec; }
+.weather-details span { color:#64748b; font-size:.85rem; }
+.weather-details strong { color:var(--ink); font-size:1.05rem; }
+.daily-forecast-title { color:var(--navy); margin:1.5rem 0 .75rem; }
+.daily-forecast { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.8rem; }
+.daily-forecast-card { display:flex; flex-direction:column; align-items:flex-start; gap:.65rem; padding:1rem; border:1px solid #dce5ec; border-radius:12px; background:#fff; box-shadow:0 3px 10px rgba(14,59,92,.035); transition:transform .18s ease, box-shadow .18s ease; }
+.daily-forecast-card:hover { transform:translateY(-2px); box-shadow:0 6px 14px rgba(14,59,92,.08); }
+.daily-forecast-card strong { color:var(--navy); }
+.daily-forecast-card span:nth-child(2) { font-size:1.5rem; }
+#places-list { margin-top:.75rem; }
+.place-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:1rem; }
+.place-card { display:flex; flex-direction:column; align-items:flex-start; gap:.55rem; padding:.85rem; border:1px solid #dce5ea; border-radius:12px; background:#fff; box-shadow:0 4px 12px rgba(14,59,92,.04); transition:transform .18s ease, box-shadow .18s ease; }
+.place-card:hover { transform:translateY(-2px); box-shadow:0 7px 16px rgba(14,59,92,.08); }
+.place-card .place-image { width:100%; height:150px; object-fit:cover; border-radius:9px; background:var(--bg); }
+.place-card h3 { margin:0; color:var(--navy); }
+.place-card p { margin:0; line-height:1.45; }
+.place-card .place-type { padding:.25rem .65rem; border-radius:999px; background:#edf3f7; color:#345d78; font-size:.85rem; font-weight:700; }
+.place-card a, .places-credit a { color:var(--blue); }
+.places-credit { color:#64748b; font-size:.85rem; margin-top:1rem; }
+.errorDisplay { color:var(--err); }
 
 /* ---------- Home hero (Dolomites photo + boarding-pass form) ---------- */
 /* On the home page only, the nav floats transparently over the photo */
@@ -95,6 +130,9 @@ h1 { color:var(--navy); }
   .container { padding:1rem .9rem; }
   .search { flex-direction:column; align-items:stretch; }
   .map { height:240px; }
+  .weather-summary { grid-template-columns:1fr; }
+  .weather-summary .cityCardImage { min-height:200px; max-height:280px; }
+  .current-weather-info .tempDisplay { font-size:2.8rem; }
   .hero-inner { padding-top:6.5rem; }
   .ticket { flex-direction:column; -webkit-mask:none; mask:none; }
   .ticket-field + .ticket-field { border-left:0; border-top:1px solid var(--line); }
