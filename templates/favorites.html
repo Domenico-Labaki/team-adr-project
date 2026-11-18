@@ -10,6 +10,7 @@
           <img src="{{ f.item_image }}" alt="{{ f.item_title }}"><span>{{ f.item_title }}</span>
         </a>
         <form method="post" action="{{ url_for('favorites_remove') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="item_id" value="{{ f.item_id }}">
           <input type="hidden" name="next" value="{{ url_for('favorites') }}">
           <button class="btn remove">Remove</button>
