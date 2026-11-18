@@ -1,14 +1,16 @@
-"""
-reset_db.py  --  (re)create the database tables for LOCAL development.
+"""Reset the disposable local SQLite database.
 
-Run it whenever you change your models in models.py:
-    python reset_db.py
+This standalone script reads DATABASE_URL from the process environment. Run
+the reset from the project directory on macOS or Linux with SQLite selected.
 
-WARNING: it drops all tables first, so you lose any local data. That's fine
-during development. On Render, the app creates the tables automatically when
-it starts (db.create_all() in app.py) - you do NOT run this script there.
-To change the schema on Render after it exists, drop the table in the
-database's PSQL console, then restart the service.
+    DATABASE_URL=sqlite:///brom-el-ard.sqlite3 python reset_db.py
+
+This drops and recreates the tables defined in models.py, deleting their data.
+
+For a fresh Render PostgreSQL database, run `python -m flask --app app init-db`
+with the schema owner's external connection URL set as DATABASE_URL in your
+local .env. The Flask CLI loads .env through python-dotenv. The init-db command
+creates missing tables and preserves existing rows.
 """
 from app import app
 from models import db
