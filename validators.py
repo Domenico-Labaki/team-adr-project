@@ -27,9 +27,11 @@ def validate_signup(form):
     # Bound both password fields before account creation.
     elif len(password) > MAX_PASSWORD_LENGTH:
         errors["password"] = f"Password must be at most {MAX_PASSWORD_LENGTH} characters."
-    if len(confirm) > MAX_PASSWORD_LENGTH:
+    if confirm == "":
+        errors["confirm"] = "Please confirm your password."
+    elif len(confirm) > MAX_PASSWORD_LENGTH:
         errors["confirm"] = f"Confirmation must be at most {MAX_PASSWORD_LENGTH} characters."
-    elif confirm != "" and confirm != password:
+    elif confirm != password:
         errors["confirm"] = "Passwords do not match."
     return errors, email
 

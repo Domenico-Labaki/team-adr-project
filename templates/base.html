@@ -19,8 +19,11 @@
       <a href="{{ url_for('home') }}">Home</a>
       {% if current_user %}
         <a href="{{ url_for('favorites') }}">My Favorites</a>
-        <span class="who">{{ current_user.email }}</span>
-        <a href="{{ url_for('logout') }}">Log out</a>
+        <span class="who">{{ current_user.normalized_email }}</span>
+        <form method="POST" action="{{ url_for('logout') }}" class="nav-logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Log out</button>
+        </form>
       {% else %}
         <a href="{{ url_for('login') }}">Log in</a>
         <a href="{{ url_for('signup') }}">Sign up</a>

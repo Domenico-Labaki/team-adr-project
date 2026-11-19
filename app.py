@@ -32,7 +32,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import event, make_url
-from sqlalchemy.exc import ArgumentError
+from sqlalchemy.exc import ArgumentError, IntegrityError
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 import requests
@@ -332,8 +332,24 @@ def signup():
         errors, email = validate_signup(request.form)
         if errors:
             return render_template("signup.html", errors=errors, data={"email": email})
-        # TODO: implement sign-up (see the Sessions & Login slides).
-        pass
+        existing = db.session.scalar(db.select(User).filter_by(normalized_email=email))
+        if existing is not None:
+            errors["email"] = "An account with this email already exists."
+            return render_template("signup.html", errors=errors, data={"email": email})
+        password = request.form.get("password", "")
+        user = User(normalized_email=email,password_hash=generate_password_hash(password))
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            errors["email"] = "An account with this email already exists."
+            return render_template("signup.html", errors=errors, data={"email": email})
+        session.clear()
+        session["user_id"] = user.id
+        session.permanent = True
+        flash("Welcome! Your account has been created.")
+        return redirect(url_for("home"))
     return render_template("signup.html", errors={}, data={})
 
 
@@ -351,9 +367,10 @@ def login():
     return render_template("login.html", errors={}, data={})
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["POST"])
 def logout():
-    # TODO: end the session (hint: session.clear()), then redirect home.
+    session.clear()
+    flash("You have been logged out.")
     return redirect(url_for("home"))
 
 
