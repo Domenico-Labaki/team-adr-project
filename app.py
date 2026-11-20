@@ -362,8 +362,16 @@ def login():
         errors, email = validate_login(request.form)
         if errors:
             return render_template("login.html", errors=errors, data={"email": email})
-        # TODO: implement log-in (see the Sessions & Login slides).
-        pass
+        user = db.session.scalar(db.select(User).filter_by(normalized_email=email))
+        password = request.form.get("password", "")
+        if user is None or not check_password_hash(user.password_hash,password) or not user.is_active:
+            errors["form"] = "Incorrect email or password."
+            return render_template("login.html", errors=errors, data={"email": email})
+        session.clear()
+        session["user_id"] = user.id
+        session.permanent = True
+        flash("Welcome back!")
+        return redirect(url_for("home"))
     return render_template("login.html", errors={}, data={})
 
 
