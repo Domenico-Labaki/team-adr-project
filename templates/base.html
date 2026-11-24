@@ -3,20 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Brom el ARD is a travel website for finding the best destinations, discovering new places and planning trips with the help of an AI advisor.">
   <title>{% block title %}Brom el ARD{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
         <!-- link above is for leaflet -->
 </head>
 <body class="{% block body_class %}{% endblock %}">
+  <a class="skip-link" href="#main">Skip to main content</a>
   <header class="nav">
     <a class="brand" href="{{ url_for('home') }}"><img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Brom el ARD" width="150" height="40"></a>
     <nav aria-label="Main navigation">
-      <a href="{{ url_for('home') }}">Home</a>
       {% if current_user %}
         <a href="{{ url_for('favorites') }}">My Favorites</a>
         <span class="who">{{ current_user.normalized_email }}</span>
@@ -30,12 +32,14 @@
       {% endif %}
     </nav>
   </header>
-  {% block hero %}{% endblock %}
-  <main class="container">
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}<div class="flash">{% for m in messages %}<p>{{ m }}</p>{% endfor %}</div>{% endif %}
-    {% endwith %}
-    {% block content %}{% endblock %}
+  <main id="main">
+    {% block hero %}{% endblock %}
+    <div class="container">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}<div class="flash" role="status">{% for m in messages %}<p>{{ m }}</p>{% endfor %}</div>{% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
   </main>
   <footer class="site-footer"><p>© 2026 Brom el ARD · GIN446 Group 04</p></footer>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"

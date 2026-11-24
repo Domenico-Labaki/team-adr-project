@@ -19,7 +19,7 @@ button, input { font-family:inherit; }
 .container { max-width:980px; margin:0 auto; padding:1.5rem 1.2rem; }
 /* Footer stays at the bottom: body is a column, main grows to fill the leftover space */
 body { min-height:100vh; display:flex; flex-direction:column; }
-main.container { flex:1; width:100%; }
+main { flex:1; width:100%; }  /* Week 12: <main> now wraps the hero + .container */
 h1 { color:var(--navy); }
 .hint { color:#64748b; font-size:.95rem; }
 .hint code { background:#eef2f7; padding:.1rem .35rem; border-radius:4px; }
@@ -116,7 +116,7 @@ body.destination-page .container { max-width:1020px; }
 .ticket-field label { font-size:.8rem; font-weight:700; color:var(--navy); margin-bottom:.35rem; }
 .ticket-field input { border:0; border-bottom:2px solid var(--line); padding:.35rem 0; font-size:1.2rem;
                       color:var(--ink); background:transparent; }
-.ticket-field input:focus { outline:none; border-bottom-color:var(--navy); }
+.ticket-field input:focus { border-bottom-color:var(--navy); }  /* Week 12: outline no longer removed */
 .ticket-stub { width:var(--stub); display:flex; align-items:center; justify-content:center;
                border-left:2px dashed var(--line); padding:0 1rem; }
 .ticket button { background:var(--apricot); color:var(--navy); font-weight:700; font-size:1.05rem;
@@ -146,3 +146,24 @@ body.destination-page .container { max-width:1020px; }
   .ticket-stub { width:auto; border-left:0; border-top:2px dashed var(--line); padding:1rem 1.4rem; }
   .ticket button { width:100%; }
 }
+
+/* ---------- Week 12: accessibility and UI states ---------- */
+/* Visible keyboard focus everywhere, in the apricot accent (shows on white and on the navy nav).
+   :focus-visible = only when using the keyboard, not after a mouse click. */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline:3px solid var(--apricot); outline-offset:2px; }
+
+/* Skip link: hidden off-screen until the first Tab, then shown top-left; Enter jumps to <main id="main"> */
+.skip-link { position:absolute; left:-999px; top:0; z-index:100; background:var(--navy); color:#fff;
+             padding:.6rem 1rem; border-radius:0 0 8px 0; text-decoration:none; }
+.skip-link:focus { left:0; }
+
+/* Images never wider than their box; height follows so they keep their shape */
+img { max-width:100%; height:auto; }
+
+/* Form fields: hover and focus states on the login / signup forms */
+.auth input:hover { border-color:#9fb3c8; }
+.auth input:focus { border-color:var(--navy); }
+
+/* Disabled buttons look disabled */
+button:disabled, .btn:disabled { opacity:.55; cursor:not-allowed; }
