@@ -4,12 +4,15 @@
 <h1>Create an account</h1>
 <form method="post" action="{{ url_for('signup') }}" novalidate class="auth">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <label>Email <input type="email" name="email" value="{{ data.get('email','') }}"></label>
-  {% if errors.get('email') %}<span class="error">{{ errors['email'] }}</span>{% endif %}
-  <label>Password <input type="password" name="password"></label>
-  {% if errors.get('password') %}<span class="error">{{ errors['password'] }}</span>{% endif %}
-  <label>Confirm password <input type="password" name="confirm"></label>
-  {% if errors.get('confirm') %}<span class="error">{{ errors['confirm'] }}</span>{% endif %}
+  <label for="email">Email</label>
+  <input type="email" id="email" name="email" value="{{ data.get('email','') }}" {% if errors.get('email') %}aria-describedby="email-error" aria-invalid="true"{% endif %}>
+  {% if errors.get('email') %}<span class="error" id="email-error">{{ errors['email'] }}</span>{% endif %}
+  <label for="password">Password</label>
+  <input type="password" id="password" name="password" {% if errors.get('password') %}aria-describedby="password-error" aria-invalid="true"{% endif %}>
+  {% if errors.get('password') %}<span class="error" id="password-error">{{ errors['password'] }}</span>{% endif %}
+  <label for="confirm">Confirm password</label>
+  <input type="password" id="confirm" name="confirm" {% if errors.get('confirm') %}aria-describedby="confirm-error" aria-invalid="true"{% endif %}>
+  {% if errors.get('confirm') %}<span class="error" id="confirm-error">{{ errors['confirm'] }}</span>{% endif %}
   <button type="submit">Sign up</button>
 </form>
 <p>Already have an account? <a href="{{ url_for('login') }}">Log in</a>.</p>

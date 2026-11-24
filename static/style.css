@@ -167,3 +167,7 @@ img { max-width:100%; height:auto; }
 
 /* Disabled buttons look disabled */
 button:disabled, .btn:disabled { opacity:.55; cursor:not-allowed; }
+
+/* Fields with an error get a red border (the error text under them says what is wrong,
+   so colour is not the only signal) */
+.auth input[aria-invalid="true"] { border-color:var(--err); }
