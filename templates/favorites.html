@@ -6,13 +6,9 @@
   <div class="cards">
     {% for f in favorites %}
       <div class="card">
-        <a href="{{ url_for('item', item_id=f.item_id) }}">
-          <img src="{{ f.item_image }}" alt="{{ f.item_title }}"><span>{{ f.item_title }}</span>
-        </a>
-        <form method="post" action="{{ url_for('favorites_remove') }}">
+        <span>Saved place ({{ f.provider }} · {{ f.place_id }})</span>
+        <form method="post" action="{{ url_for('favorites_remove', favorite_id=f.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="item_id" value="{{ f.item_id }}">
-          <input type="hidden" name="next" value="{{ url_for('favorites') }}">
           <button class="btn remove">Remove</button>
         </form>
       </div>

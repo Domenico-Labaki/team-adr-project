@@ -16,6 +16,7 @@ from functools import wraps
 from ipaddress import ip_address
 from uuid import uuid4
 
+import requests
 from flask import (
     Flask,
     abort,
@@ -35,7 +36,6 @@ from sqlalchemy import event, make_url
 from sqlalchemy.exc import ArgumentError, IntegrityError
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
-import requests
 
 import api_client
 from models import Favorite, User, db
@@ -386,40 +386,24 @@ def logout():
 @app.route("/favorites")
 @login_required
 def favorites():
-    items = Favorite.query.filter_by(user_id=session["user_id"]).all()
-    return render_template("favorites.html", favorites=items)
+    user = get_current_user()
+    favorites = db.session.scalars(db.select(Favorite).filter_by(user_id=user.id).order_by(Favorite.created_at.desc())).all()
+    return render_template("favorites.html", favorites=favorites)
 
 
 @app.route("/favorites/add", methods=["POST"])
 @login_required
 def favorites_add():
-    item_id = request.form.get("item_id", "").strip()
-    if item_id:
-        exists = Favorite.query.filter_by(
-            user_id=session["user_id"], item_id=item_id).first()
-        if exists:
-            flash("Already in your favorites.")
-        else:
-            db.session.add(Favorite(
-                user_id=session["user_id"], item_id=item_id,
-                item_title=request.form.get("item_title", ""),
-                item_image=request.form.get("item_image", "")))
-            db.session.commit()
-            flash("Saved to favorites.")
-    return redirect(request.form.get("next") or url_for("favorites"))
+    abort(503, description="Saving favorites is temporarily unavailable.")
 
 
-@app.route("/favorites/remove", methods=["POST"])
+@app.route("/favorites/<int:favorite_id>/remove", methods=["POST"])
 @login_required
-def favorites_remove():
-    item_id = request.form.get("item_id", "").strip()
-    fav = Favorite.query.filter_by(
-        user_id=session["user_id"], item_id=item_id).first()
-    if fav:
-        db.session.delete(fav)
-        db.session.commit()
-        flash("Removed from favorites.")
-    return redirect(request.form.get("next") or url_for("favorites"))
+def favorites_remove(favorite_id):
+    favorite = owned_or_404(Favorite, favorite_id)
+    db.session.delete(favorite)
+    db.session.commit()
+    return redirect(url_for("favorites"))
 
 
 if __name__ == "__main__":
