@@ -33,6 +33,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import event, make_url
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import ArgumentError, IntegrityError
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -51,6 +53,12 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.environ.get("RENDER") == "true",
     PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
     SESSION_REFRESH_EACH_REQUEST=False,
+)
+
+app.config["ALLOWED_PROVIDERS"] = frozenset(
+    provider.strip().lower()
+    for provider in os.environ.get("ALLOWED_PROVIDERS", "overpass").split(",")
+    if provider.strip()
 )
 
 # Only these public settings are passed to the destination page.
@@ -394,7 +402,37 @@ def favorites():
 @app.route("/favorites/add", methods=["POST"])
 @login_required
 def favorites_add():
-    abort(503, description="Saving favorites is temporarily unavailable.")
+    provider = request.form.get("provider", "").strip().lower()
+    place_id = request.form.get("place_id", "").strip()
+
+    if provider not in app.config["ALLOWED_PROVIDERS"] or not place_id:
+        abort(400, description="Invalid place reference.")
+
+    try:
+        reference = api_client.validate_favorite_reference(provider, place_id)
+    except api_client.ProviderLookupUnavailable:
+        abort(503, description="Saving favorites is temporarily unavailable.")
+
+    if reference is None:
+        abort(400, description="Invalid place reference.")
+
+    canonical_provider, canonical_place_id = reference
+    insert = {
+        "postgresql": postgresql_insert,
+        "sqlite": sqlite_insert,
+    }[db.engine.dialect.name]
+
+    statement = insert(Favorite.__table__).values(
+        user_id=get_current_user().id,
+        provider=canonical_provider,
+        place_id=canonical_place_id,
+    ).on_conflict_do_nothing(
+        index_elements=["user_id", "provider", "place_id"],
+    )
+
+    db.session.execute(statement)
+    db.session.commit()
+    return redirect(url_for("favorites"))
 
 
 @app.route("/favorites/<int:favorite_id>/remove", methods=["POST"])

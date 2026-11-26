@@ -18,6 +18,17 @@ OVERPASS_API_URL = os.environ.get(
 
 TIMEOUT = 6  # seconds; give up instead of hanging if the API is slow
 
+
+class ProviderLookupUnavailable(Exception):
+    """The place provider could not be queried."""
+
+
+def validate_favorite_reference(provider, place_id):
+    """Return a canonical reference or None for an invalid or missing place."""
+    # SCRUM-12 will provide the shared place lookup.
+    raise ProviderLookupUnavailable
+
+
 # ----- temporary sample data (delete once your API works) -----
 _SAMPLE = [
     {"id": "1", "title": "Example Item One",
