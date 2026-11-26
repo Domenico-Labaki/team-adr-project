@@ -308,14 +308,6 @@ def places_api():
     return jsonify({"places": places})
 
 
-@app.route("/item/<item_id>")
-def item(item_id):
-    data = api_client.get_item(item_id)
-    if not data:
-        abort(404)
-    return render_template("detail.html", item=data)
-
-
 # ===================================================================
 # AUTHENTICATION  --  YOU BUILD THIS (sign-up, log-in, log-out, sessions)
 # ===================================================================
