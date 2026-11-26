@@ -23,9 +23,23 @@
 </section>
 {% endblock %}
 {% block content %}
-<!-- Reserved for Sprint 2 -->
-<section id="featured">  
+<section id="featured">
   <h2>Featured Destinations</h2>
-  <p class="hint">Coming soon</p>  
+  {% if featured_destinations %}
+    <ul>
+      {% for destination in featured_destinations %}
+        <li>
+          <a href="{{ url_for('search', city=destination.city, country=destination.country) }}">
+            {{ destination.city }}, {{ destination.country }}
+          </a>
+          {% if destination.description %}
+            <p>{{ destination.description }}</p>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="hint">No featured destinations yet.</p>
+  {% endif %}
 </section>
 {% endblock %}

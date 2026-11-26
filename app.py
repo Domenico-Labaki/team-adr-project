@@ -16,6 +16,7 @@ from functools import wraps
 from ipaddress import ip_address
 from uuid import uuid4
 
+import click
 import requests
 from flask import (
     Flask,
@@ -35,12 +36,12 @@ from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import event, make_url
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.exc import ArgumentError, IntegrityError
+from sqlalchemy.exc import ArgumentError, IntegrityError, SQLAlchemyError
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import api_client
-from models import Favorite, User, db
+from models import AuditLog, Destination, Favorite, User, db
 from validators import validate_login, validate_signup
 
 app = Flask(__name__)
@@ -203,6 +204,42 @@ def init_db():
     print("Database initialized.")
 
 
+@app.cli.command("create-admin")
+def create_admin():
+    """Provision an admin account from the local operator console."""
+    email = click.prompt("Email")
+    password = click.prompt("Password", hide_input=True)
+    confirm = click.prompt("Confirm password", hide_input=True)
+
+    errors, normalized_email = validate_signup({
+        "email": email,
+        "password": password,
+        "confirm": confirm,
+    })
+    if errors:
+        raise click.ClickException(" ".join(errors.values()))
+
+    existing = db.session.scalar(
+        db.select(User.id).where(User.normalized_email == normalized_email)
+    )
+    if existing is not None:
+        raise click.ClickException("An account with this email already exists.")
+
+    db.session.add(User(
+        normalized_email=normalized_email,
+        password_hash=generate_password_hash(password),
+        role="admin",
+        is_active=True,
+    ))
+    try:
+        db.session.commit()
+    except SQLAlchemyError as error:
+        db.session.rollback()
+        raise click.ClickException("The admin account could not be created.") from error
+
+    click.echo("Admin account created.")
+
+
 """
 Look up the signed-in user once per request.
 Clear the session if the user ID is invalid or the account is missing or inactive.
@@ -266,10 +303,118 @@ def owned_or_404(model, record_id):
     )
 
 
+# ---------- administration ----------------------------------------
+def commit_admin_change(statement, *, action, target_type, target_id):
+    try:
+        result = db.session.execute(statement)
+        if result.rowcount == 0:
+            return False
+
+        db.session.add(AuditLog(
+            admin_id=get_current_user().id,
+            action=action,
+            target_type=target_type,
+            target_id=target_id,
+            request_id=g.request_id,
+        ))
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        raise
+
+    return True
+
+
+@app.route("/admin/users", methods=["GET"])
+@admin_required
+def admin_users():
+    accounts = db.session.execute(
+        db.select(User.id, User.normalized_email, User.role, User.is_active)
+        .order_by(User.normalized_email)
+    ).all()
+    return render_template("admin/users.html", accounts=accounts)
+
+
+@app.route("/admin/users/<int:user_id>/status", methods=["POST"])
+@admin_required
+def admin_user_status(user_id):
+    if not 0 < user_id < 2**31:
+        abort(404)
+    db.get_or_404(User, user_id)
+
+    status = request.form.get("status")
+    if status not in {"active", "inactive"}:
+        flash("Choose Active or Inactive.")
+        return redirect(url_for("admin_users"))
+
+    is_active = status == "active"
+    changed = commit_admin_change(
+        db.update(User)
+        .where(User.id == user_id, User.is_active != is_active)
+        .values(is_active=is_active),
+        action="activate_user" if is_active else "deactivate_user",
+        target_type="user",
+        target_id=user_id,
+    )
+    flash("Account status updated." if changed else "Account status was already set.")
+    return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/destinations", methods=["GET"])
+@admin_required
+def admin_destinations():
+    destinations = db.session.scalars(
+        db.select(Destination)
+        .order_by(Destination.country, Destination.city, Destination.id)
+    ).all()
+    return render_template("admin/destinations.html", destinations=destinations)
+
+
+@app.route("/admin/destinations/<int:destination_id>", methods=["POST"])
+@admin_required
+def admin_destination_update(destination_id):
+    if not 0 < destination_id < 2**31:
+        abort(404)
+    db.get_or_404(Destination, destination_id)
+
+    description = request.form.get("description")
+    featured = request.form.get("is_featured")
+    if description is None or featured not in {"0", "1"}:
+        flash("Submit a description field and choose whether to feature the destination.")
+        return redirect(url_for("admin_destinations"))
+
+    description = description.strip()
+    if len(description) > 2000 or "\x00" in description:
+        flash("Enter a valid description of at most 2,000 characters.")
+        return redirect(url_for("admin_destinations"))
+
+    description = description or None
+    is_featured = featured == "1"
+    changed = commit_admin_change(
+        db.update(Destination)
+        .where(
+            Destination.id == destination_id,
+            Destination.description.is_distinct_from(description)
+            | (Destination.is_featured != is_featured),
+        )
+        .values(description=description, is_featured=is_featured),
+        action="update_destination",
+        target_type="destination",
+        target_id=destination_id,
+    )
+    flash("Destination updated." if changed else "No destination changes to save.")
+    return redirect(url_for("admin_destinations"))
+
+
 # ---------- content (from your API) --------------------------------
-@app.route("/")
+@app.route("/", methods=["GET"])
 def home():
-    return render_template("home.html")
+    featured_destinations = db.session.scalars(
+        db.select(Destination)
+        .where(Destination.is_featured.is_(True))
+        .order_by(Destination.country, Destination.city, Destination.id)
+    ).all()
+    return render_template("home.html", featured_destinations=featured_destinations)
 
 
 @app.route("/search")

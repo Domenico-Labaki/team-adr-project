@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Manage destinations{% endblock %}
+{% block content %}
+<h1>Manage destinations</h1>
+{% for destination in destinations %}
+  <section>
+    <h2>{{ destination.city }}, {{ destination.country }}</h2>
+    <form method="post"
+          action="{{ url_for('admin_destination_update', destination_id=destination.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label for="description-{{ destination.id }}">Description</label>
+      <textarea id="description-{{ destination.id }}" name="description"
+                maxlength="2000">{{ destination.description or "" }}</textarea>
+
+      <label for="featured-{{ destination.id }}">Featured on the homepage</label>
+      <select id="featured-{{ destination.id }}" name="is_featured">
+        <option value="0"{% if not destination.is_featured %} selected{% endif %}>No</option>
+        <option value="1"{% if destination.is_featured %} selected{% endif %}>Yes</option>
+      </select>
+
+      <button type="submit">Save {{ destination.city }}</button>
+    </form>
+  </section>
+{% else %}
+  <p>No saved destinations yet.</p>
+{% endfor %}
+{% endblock %}

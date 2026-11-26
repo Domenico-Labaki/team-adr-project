@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Manage accounts{% endblock %}
+{% block content %}
+<h1>Manage accounts</h1>
+<ul>
+  {% for account in accounts %}
+    <li>
+      <p>{{ account.normalized_email }} · {{ account.role }}
+        · {{ "Active" if account.is_active else "Inactive" }}</p>
+      <form method="post" action="{{ url_for('admin_user_status', user_id=account.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" name="status"
+                value="{{ 'inactive' if account.is_active else 'active' }}">
+          {{ "Deactivate" if account.is_active else "Activate" }} {{ account.normalized_email }}
+        </button>
+      </form>
+    </li>
+  {% else %}
+    <li>No accounts found.</li>
+  {% endfor %}
+</ul>
+{% endblock %}
