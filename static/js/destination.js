@@ -224,19 +224,18 @@ async function loadPlaces(latitude, longitude, city, country) {
 
         const placeCards = document.createElement("div");
         placeCards.className = "place-cards";
-        const placeImages = [];
+        const placePhotos = [];
 
         for (let i = 0; i < data.places.length; i++) {
             const place = data.places[i];
             const card = document.createElement("article");
             card.className = "place-card";
 
-            const placeImage = document.createElement("img");
-            placeImage.className = "place-image";
-            placeImage.src = makePlaceholder();
-            placeImage.alt = `Photo of ${place.name}`;
-            card.appendChild(placeImage);
-            placeImages.push(placeImage);
+            const photoBox = document.createElement("div");
+            photoBox.className = "place-image-unavailable";
+            photoBox.textContent = "No image available";
+            card.appendChild(photoBox);
+            placePhotos.push(photoBox);
 
             const placeName = document.createElement("h3");
             placeName.textContent = place.name;
@@ -265,9 +264,20 @@ async function loadPlaces(latitude, longitude, city, country) {
 
         placesBox.appendChild(placeCards);
 
-        // Load one photo at a time to avoid sending many requests at once.
+        // Look for a Wikimedia photo for each place. Keep the text message if none is found.
         for (let i = 0; i < data.places.length; i++) {
-            placeImages[i].src = await getPlaceImage(data.places[i].name, city, country);
+            const imageUrl = await getPlaceImage(data.places[i].name, city, country);
+
+            if (imageUrl) {
+                const placeImage = document.createElement("img");
+                placeImage.className = "place-image";
+                placeImage.src = imageUrl;
+                placeImage.alt = `Photo of ${data.places[i].name}`;
+                placeImage.onerror = function () {
+                    placeImage.replaceWith(createNoImageMessage());
+                };
+                placePhotos[i].replaceWith(placeImage);
+            }
         }
     } catch (error) {
         console.error(error);
@@ -306,7 +316,15 @@ async function getPlaceImage(placeName, city, country) {
         console.warn(`Could not load a photo for ${placeName}.`, error);
     }
 
-    return makePlaceholder();
+    return "";
+}
+
+// Creates the message shown when a place has no working photo.
+function createNoImageMessage() {
+    const message = document.createElement("div");
+    message.className = "place-image-unavailable";
+    message.textContent = "No image available";
+    return message;
 }
 
 // Creates a simple image shown when no suitable photo is available.
