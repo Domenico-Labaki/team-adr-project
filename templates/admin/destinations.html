@@ -3,10 +3,10 @@
 {% block content %}
 <h1>Manage destinations</h1>
 {% for destination in destinations %}
-  <section>
-    <h2>{{ destination.city }}, {{ destination.country }}</h2>
+  <section class="admin-card">
+    <h2>{{ destination.city }}, {{ destination.country }} {% if destination.is_featured %} <span class="status status-active">Featured</span> {% endif %}</h2>
     <form method="post"
-          action="{{ url_for('admin_destination_update', destination_id=destination.id) }}">
+          action="{{ url_for('admin_destination_update', destination_id=destination.id) }}" class="admin-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <label for="description-{{ destination.id }}">Description</label>

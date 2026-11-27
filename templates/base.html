@@ -21,6 +21,10 @@
     <nav aria-label="Main navigation">
       {% if current_user %}
         <a href="{{ url_for('favorites') }}">My Favorites</a>
+        {% if current_user.role == "admin" %}
+          <a href="{{ url_for('admin_users') }}">Accounts</a>
+          <a href="{{ url_for('admin_destinations') }}">Destinations</a>
+        {% endif %}
         <span class="who">{{ current_user.normalized_email }}</span>
         <form method="POST" action="{{ url_for('logout') }}" class="nav-logout">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

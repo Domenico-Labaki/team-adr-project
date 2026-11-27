@@ -171,3 +171,50 @@ button:disabled, .btn:disabled { opacity:.55; cursor:not-allowed; }
 /* Fields with an error get a red border (the error text under them says what is wrong,
    so colour is not the only signal) */
 .auth input[aria-invalid="true"] { border-color:var(--err); }
+
+/* ---------- B13: admin pages ---------- */
+/* Accounts table: full width, no double borders between cells */
+.admin-table { width:100%; border-collapse:collapse; margin-top:1rem; }
+/* Every cell: padding inside, a thin line under each row, text lined up at the top-left */
+.admin-table th, .admin-table td { padding:.65rem .75rem; border-bottom:1px solid var(--line);
+                                   text-align:left; vertical-align:middle; }
+/* Header row: light background and navy bold text so it reads as the column titles */
+.admin-table thead th { background:var(--bg); color:var(--navy); font-weight:700; }
+/* Light highlight on the row under the mouse, so it is easy to follow a row across */
+.admin-table tbody tr:hover { background:#f7f9fb; }
+/* Long emails may break onto a second line instead of pushing the table off the screen */
+.admin-table td:first-child { overflow-wrap:anywhere; }
+/* The forms in the Action cell take no extra space; the button is a bit smaller than page buttons */
+.admin-table form { margin:0; }
+.admin-table button { padding:.4rem .75rem; font-size:.9rem; overflow-wrap:anywhere; }
+
+/* Status badge: a small rounded "pill". The word (Active / Inactive) carries the meaning;
+   the colour is only an extra hint */
+.status { display:inline-block; padding:.15rem .6rem; border-radius:999px; font-size:.85rem; font-weight:600; }
+.status-active { background:#e3f1ea; color:var(--cedar); }   /* green for active */
+.status-inactive { background:#eceff3; color:#5b6470; }      /* grey for inactive */
+
+/* Phones: tighter cells and smaller text so all 4 columns still fit */
+@media (max-width:600px) {
+  .admin-table th, .admin-table td { padding:.5rem .4rem; font-size:.9rem; }
+}
+
+/* Destinations admin: each destination is a white "card" with a soft border */
+.admin-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:1rem 1.2rem; }
+/* The Featured badge sits in the middle of the heading line, with a small gap after the country */
+.admin-card h2 { margin-top:0; }   /* no extra browser gap above the title inside the card */
+.admin-card h2 .status { vertical-align:middle; margin-left:.4rem; }
+/* The form is one column: label, field, label, field, button, with even gaps between them */
+.admin-form { display:flex; flex-direction:column; gap:.4rem; }
+.admin-form label { font-weight:600; margin-top:.5rem; }
+/* Textarea and select: same look as the login fields; font-family:inherit because the browser
+   would otherwise use its own default font for these two elements */
+.admin-form textarea, .admin-form select { font-family:inherit; font-size:1rem; padding:.55rem .7rem;
+       border:1px solid var(--line); border-radius:8px; }
+/* The description box is tall enough for a paragraph and can only be resized up/down,
+   so the user cannot drag it wider than the card */
+.admin-form textarea { min-height:7rem; resize:vertical; line-height:1.5; }
+/* The select only needs to be as wide as "Yes"/"No", not the whole card */
+.admin-form select { align-self:flex-start; min-width:8rem; }
+/* The Save button keeps its natural width and sits under the fields */
+.admin-form button { align-self:flex-start; margin-top:.8rem; }

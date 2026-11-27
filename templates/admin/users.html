@@ -2,21 +2,38 @@
 {% block title %}Manage accounts{% endblock %}
 {% block content %}
 <h1>Manage accounts</h1>
-<ul>
-  {% for account in accounts %}
-    <li>
-      <p>{{ account.normalized_email }} · {{ account.role }}
-        · {{ "Active" if account.is_active else "Inactive" }}</p>
-      <form method="post" action="{{ url_for('admin_user_status', user_id=account.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" name="status"
-                value="{{ 'inactive' if account.is_active else 'active' }}">
-          {{ "Deactivate" if account.is_active else "Activate" }} {{ account.normalized_email }}
-        </button>
-      </form>
-    </li>
-  {% else %}
-    <li>No accounts found.</li>
-  {% endfor %}
-</ul>
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th scope="col">Email</th>
+      <th scope="col">Role</th>
+      <th scope="col">Status</th>
+      <th scope="col">Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for account in accounts %}
+      <tr>
+        <td>{{ account.normalized_email }}</td>
+        <td>{{ account.role }}</td>
+        <td><span class="status {{ 'status-active' if account.is_active else 'status-inactive'}}">{{ "Active" if account.is_active else "Inactive" }}</span></td>
+        <td>
+          {% if account.id != current_user.id %}
+            <form method="post" action="{{ url_for('admin_user_status', user_id=account.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" name="status"
+                      value="{{ 'inactive' if account.is_active else 'active' }}">
+                {{ "Deactivate" if account.is_active else "Activate" }} {{ account.normalized_email }}
+              </button>
+            </form>
+          {% else %}
+            <span class="hint">This is you</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr> <td colspan="4"> No accounts found. </td> </tr>
+    {% endfor %}
+  </tbody>
+</table>
 {% endblock %}
